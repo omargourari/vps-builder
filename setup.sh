@@ -1138,7 +1138,7 @@ setup_step_start "${STEP_TEXT[7]}"
             nginx -t
             mkdir /var/log/nginx/_
             sed -i "s/*.log/*.log \/var\/log\/nginx\/*\/*.log/g" /etc/logrotate.d/nginx # add log files in subdirectories
-            sudo service nginx restart
+            services nginx restart
             file_log "Nginx installed successfully"
         else
             file_log "Nginx rule add to Ufw failed"
@@ -1348,204 +1348,193 @@ fi
 # Step 12 - Change root's password
 ##############################################################
 
-# if [[ $RESET_ROOT_PWD == 'y' ]]; then
-#     setup_step_start "${STEP_TEXT[12]}"
-#     {
-#         # Generate a 15 character random password
-#         file_log "Generating roots new password..."
-#         PASS_ROOT="$(< /dev/urandom tr -cd "[:alnum:]" | head -c 15)"
-#         set_exit_code $?
+if [[ $RESET_ROOT_PWD == 'y' ]]; then
+    setup_step_start "${STEP_TEXT[12]}"
+    {
+        # Generate a 15 character random password
+        file_log "Generating roots new password..."
+        PASS_ROOT="$(< /dev/urandom tr -cd "[:alnum:]" | head -c 15)"
+        set_exit_code $?
 
-#         file_log "Generated root Password - ${PASS_ROOT}"
+        file_log "Generated root Password - ${PASS_ROOT}"
 
-#         # Change root's password
-#         file_log "Setting the new root password"
-#         echo -e "${PASS_ROOT}\\n${PASS_ROOT}" | passwd root
-#         set_exit_code $?
-#     } 2>> "$LOGFILE" >&2
+        # Change root's password
+        file_log "Setting the new root password"
+        echo -e "${PASS_ROOT}\\n${PASS_ROOT}" | passwd root
+        set_exit_code $?
+    } 2>> "$LOGFILE" >&2
 
-#     setup_step_end "${STEP_TEXT[12]}"
-#     if [[ $exit_code -gt 0 ]]; then
-#         revert_root_pass_change
-#     fi
-# fi
+    setup_step_end "${STEP_TEXT[12]}"
+    if [[ $exit_code -gt 0 ]]; then
+        revert_root_pass_change
+    fi
+fi
 
 ##############################################################
 # Step 13 - Enable SSH-only login
 ##############################################################
 
-# function config_search_regex(){
-#     local search_key=$1
-#     declare -i isCommented=$2
-#     local value=$3
+function config_search_regex(){
+    local search_key=$1
+    declare -i isCommented=$2
+    local value=$3
 
-#     if [[ "$isCommented" -eq 1 ]] && [[ ! "$value" ]]; then
-#         # Search Regex for an uncommented (active) field
-#         echo '(^ *)'"$search_key"'( *).*([[:word:]]+)( *)$'
-#     elif [[ "$isCommented" -eq 2 ]] && [[ ! "$value" ]]; then
-#         # Search Regex for a commented out field
-#         echo '(^ *)#.*'"$search_key"'( *).*([[:word:]]+)( *)$'
+    if [[ "$isCommented" -eq 1 ]] && [[ ! "$value" ]]; then
+        # Search Regex for an uncommented (active) field
+        echo '(^ *)'"$search_key"'( *).*([[:word:]]+)( *)$'
+    elif [[ "$isCommented" -eq 2 ]] && [[ ! "$value" ]]; then
+        # Search Regex for a commented out field
+        echo '(^ *)#.*'"$search_key"'( *).*([[:word:]]+)( *)$'
 
-#     elif [[ "$isCommented" -eq 1 ]] && [[ "$value" ]]; then
-#         # Search Regex for an active field with specified value
-#         echo '(^ *)'"$search_key"'( *)('"$value"')( *)$'
-#     elif [[ "$isCommented" -eq 2 ]] && [[ "$value" ]]; then
-#         # Search Regex for an commented (inactive) field with specified value
-#         echo '(^ *)#.*'"$search_key"'( *)('"$value"')( *)$'
+    elif [[ "$isCommented" -eq 1 ]] && [[ "$value" ]]; then
+        # Search Regex for an active field with specified value
+        echo '(^ *)'"$search_key"'( *)('"$value"')( *)$'
+    elif [[ "$isCommented" -eq 2 ]] && [[ "$value" ]]; then
+        # Search Regex for an commented (inactive) field with specified value
+        echo '(^ *)#.*'"$search_key"'( *)('"$value"')( *)$'
 
-#     else
-#         exit 1    
-#     fi
-# }
+    else
+        exit 1    
+    fi
+}
 
-# function set_config_key(){
-#     local file_location=$1
-#     local key=$2
-#     local value=$3
+function set_config_key(){
+    local file_location=$1
+    local key=$2
+    local value=$3
 
-#     ACTIVE_KEYS_REGEX=$(config_search_regex "$key" "1")
-#     ACTIVE_CORRECT_KEYS_REGEX=$(config_search_regex "$key" "1" "$value")
-#     INACTIVE_KEYS_REGEX=$(config_search_regex "$key" "2")
+    ACTIVE_KEYS_REGEX=$(config_search_regex "$key" "1")
+    ACTIVE_CORRECT_KEYS_REGEX=$(config_search_regex "$key" "1" "$value")
+    INACTIVE_KEYS_REGEX=$(config_search_regex "$key" "2")
 
-#     # If no keys present - insert the correct configuration to the end of the file
-#     if [[ $(grep -Pnc "$INACTIVE_KEYS_REGEX" "$file_location") -eq 0 ]] && [[ $(grep -Pnc "$ACTIVE_KEYS_REGEX" "$file_location") -eq 0 ]];
-#     then
-#         echo "$key" "$value" >> "$file_location"
-#     fi
+    # If no keys present - insert the correct configuration to the end of the file
+    if [[ $(grep -Pnc "$INACTIVE_KEYS_REGEX" "$file_location") -eq 0 ]] && [[ $(grep -Pnc "$ACTIVE_KEYS_REGEX" "$file_location") -eq 0 ]];
+    then
+        echo "$key" "$value" >> "$file_location"
+    fi
 
-#     # If Config file already has correct configuration
-#     # Keep only the LAST correct one and comment out the rest
-#     if [[ $(grep -Pnc "$ACTIVE_KEYS_REGEX" "$file_location") -gt 0 ]]; 
-#     then
-#         # Last correct active entry's line number
-#         LAST_CORRECT_LINE=$(grep -Pn "$ACTIVE_CORRECT_KEYS_REGEX" "$file_location" | tail -1 | cut -d: -f 1)
+    # If Config file already has correct configuration
+    # Keep only the LAST correct one and comment out the rest
+    if [[ $(grep -Pnc "$ACTIVE_KEYS_REGEX" "$file_location") -gt 0 ]]; 
+    then
+        # Last correct active entry's line number
+        LAST_CORRECT_LINE=$(grep -Pn "$ACTIVE_CORRECT_KEYS_REGEX" "$file_location" | tail -1 | cut -d: -f 1)
 
-#         # Loop through each of the active lines
-#         grep -Pn "$ACTIVE_KEYS_REGEX" "$file_location" | while read -r i; 
-#         do
-#             # Get the line number
-#             LINE_NUMBER=$(echo "$i" | cut -d: -f 1 )
+        # Loop through each of the active lines
+        grep -Pn "$ACTIVE_KEYS_REGEX" "$file_location" | while read -r i; 
+        do
+            # Get the line number
+            LINE_NUMBER=$(echo "$i" | cut -d: -f 1 )
 
-#             # If this is the last correct entry - break
-#             if [[ $LAST_CORRECT_LINE -ne 0 ]] && [[ $LINE_NUMBER == "$LAST_CORRECT_LINE" ]]; then
-#                 break
-#             fi
+            # If this is the last correct entry - break
+            if [[ $LAST_CORRECT_LINE -ne 0 ]] && [[ $LINE_NUMBER == "$LAST_CORRECT_LINE" ]]; then
+                break
+            fi
 
-#             # Comment out the line
-#             sed -i "$LINE_NUMBER"'s/.*/#&/' "$file_location"
-#         done
-#     fi
+            # Comment out the line
+            sed -i "$LINE_NUMBER"'s/.*/#&/' "$file_location"
+        done
+    fi
 
-#     # If Config file has commented configuration and NO active configuration 
-#     # Append the appropriate configuration below the LAST commented configuration
-#     if [[ $(grep -Pnc "$INACTIVE_KEYS_REGEX" "$file_location") -gt 0 ]] && [[ $(grep -Pnc "$ACTIVE_KEYS_REGEX" "$file_location") -eq 0 ]]; 
-#     then
-#         # Get the line number of - last commented configuration
-#         LINE_NUMBER=$(grep -Pn "$INACTIVE_KEYS_REGEX" "$file_location" | tail -1 | cut -d: -f 1)
+    # If Config file has commented configuration and NO active configuration 
+    # Append the appropriate configuration below the LAST commented configuration
+    if [[ $(grep -Pnc "$INACTIVE_KEYS_REGEX" "$file_location") -gt 0 ]] && [[ $(grep -Pnc "$ACTIVE_KEYS_REGEX" "$file_location") -eq 0 ]]; 
+    then
+        # Get the line number of - last commented configuration
+        LINE_NUMBER=$(grep -Pn "$INACTIVE_KEYS_REGEX" "$file_location" | tail -1 | cut -d: -f 1)
 
-#         (( LINE_NUMBER++ ))
+        (( LINE_NUMBER++ ))
 
-#         # Insert the correct setting below the last commented configuration
-#         sed -i "$LINE_NUMBER"'i'"$key"' '"$value" "$file_location"
-#     fi
-# }
+        # Insert the correct setting below the last commented configuration
+        sed -i "$LINE_NUMBER"'i'"$key"' '"$value" "$file_location"
+    fi
+}
 
-# setup_step_start "${STEP_TEXT[12]}"
-# {
-#     # Backup the sshd_config file
-#     file_log "Backing up /etc/ssh/sshd_config file to /etc/ssh/sshd_config$BACKUP_EXTENSION"
-#     cp /etc/ssh/sshd_config /etc/ssh/sshd_config"$BACKUP_EXTENSION"
-#     set_exit_code $?
+setup_step_start "${STEP_TEXT[12]}"
+{
+    # Backup the sshd_config file
+    file_log "Backing up /etc/ssh/sshd_config file to /etc/ssh/sshd_config$BACKUP_EXTENSION"
+    cp /etc/ssh/sshd_config /etc/ssh/sshd_config"$BACKUP_EXTENSION"
+    set_exit_code $?
 
-#     # Remove root login
-#     file_log "Removing root login -> PermitRootLogin no"
-#     set_config_key "/etc/ssh/sshd_config" "PermitRootLogin" "no"
-#     set_exit_code $?
+    # Remove root login
+    file_log "Removing root login -> PermitRootLogin no"
+    set_config_key "/etc/ssh/sshd_config" "PermitRootLogin" "no"
+    set_exit_code $?
 
-#     # Disable password login
-#     file_log "Disabling password login -> PasswordAuthentication no"
-#     set_config_key "/etc/ssh/sshd_config" "PasswordAuthentication" "no"
-#     set_exit_code $?
+    # Disable password login
+    file_log "Disabling password login -> PasswordAuthentication no"
+    set_config_key "/etc/ssh/sshd_config" "PasswordAuthentication" "no"
+    set_exit_code $?
 
-#     # Set SSH Authorization-Keys path
-#     file_log "Setting SSH Authorization-Keys path -> AuthorizedKeysFile '%h\/\.ssh\/authorized_keys'"
-#     set_config_key "/etc/ssh/sshd_config" "AuthorizedKeysFile" '\.ssh\/authorized_keys %h\/\.ssh\/authorized_keys'
-#     set_exit_code $?
+    # Set SSH Authorization-Keys path
+    file_log "Setting SSH Authorization-Keys path -> AuthorizedKeysFile '%h\/\.ssh\/authorized_keys'"
+    set_config_key "/etc/ssh/sshd_config" "AuthorizedKeysFile" '\.ssh\/authorized_keys %h\/\.ssh\/authorized_keys'
+    set_exit_code $?
 
-#     file_log "Restarting ssh service..."
-#     { 
-#         set_exit_code $(service_action_and_chk_error "sshd" "restart")
-#         if [[ $exit_code -eq 0 ]]; then
-#             false
-#         fi
-#         } || { 
-#                 # Because Ubuntu 14.04 does not have sshd
-#                 set_exit_code $(service_action_and_chk_error "ssh" "restart")
-#             }
-# } 2>> "$LOGFILE" >&2
+    file_log "Restarting ssh service..."
+    { 
+        set_exit_code $(service_action_and_chk_error "sshd" "restart")
+        if [[ $exit_code -eq 0 ]]; then
+            false
+        fi
+        } || { 
+                # Because Ubuntu 14.04 does not have sshd
+                set_exit_code $(service_action_and_chk_error "ssh" "restart")
+            }
+} 2>> "$LOGFILE" >&2
 
-# setup_step_end "${STEP_TEXT[12]}"
-# if [[ $exit_code -gt 0 ]]; then
-#     file_log "Enabling SSH-only login failed."
-#     revert_everything_and_exit "${STEP_TEXT[12]}"
-# fi
+setup_step_end "${STEP_TEXT[12]}"
+if [[ $exit_code -gt 0 ]]; then
+    file_log "Enabling SSH-only login failed."
+    revert_everything_and_exit "${STEP_TEXT[12]}"
+fi
 
 ##############################################################
 # Step 13 - Change hostname
 ##############################################################
 
-# setup_step_start "${STEP_TEXT[13]}"
-# {
-#     HOSTNAME="${SERVERNAME:4:7}-${SERVERNICKNAME}"
-#     hostnamectl set-hostname $HOSTNAME
-#     file_log "Hostname changed to ${SERVERNAME:4:7}-${SERVERNICKNAME}"
-#     set_exit_code $?
-# } 2>> "$LOGFILE" >&2
+setup_step_start "${STEP_TEXT[13]}"
+{
+    HOSTNAME="${SERVERNAME:4:7}-${SERVERNICKNAME}"
+    hostnamectl set-hostname $HOSTNAME
+    file_log "Hostname changed to ${SERVERNAME:4:7}-${SERVERNICKNAME}"
+    set_exit_code $?
+} 2>> "$LOGFILE" >&2
 
-# setup_step_end "${STEP_TEXT[13]}"
-# if [[ $exit_code -gt 0 ]]; then
-#     file_log "Changin hostname failed."
-#     revert_everything_and_exit "${STEP_TEXT[13]}"
-# fi
+setup_step_end "${STEP_TEXT[13]}"
+if [[ $exit_code -gt 0 ]]; then
+    file_log "Changin hostname failed."
+    revert_everything_and_exit "${STEP_TEXT[13]}"
+fi
 
 ##############################################################
 # Step 14 - Change ssh port
 ##############################################################
 
-# setup_step_start "${STEP_TEXT[14]}"
-# {
-#     # Generate a random port number between 1024 and 65535
-#     SSH_PORT=$(shuf -i 1024-65535 -n 1)
-#     sudo ufw allow ${SSH_PORT}/tcp 
-#     # Create backup of current SSH config
-#     NOW=$(date +"%m_%d_%Y-%H_%M_%S")
-#     cp /etc/ssh/sshd_config /etc/ssh/sshd_config.inst.bckup.$NOW
-#     # Apply changes to sshd_config
-#     sed -i -e "/Port /c\Port $SSH_PORT" /etc/ssh/sshd_config
-#     file_log "Restarting SSH in 2 seconds. Please wait.\n"
-#     sleep 2
-#     # Restart SSH service
-#     service sshd restart
-#     set_exit_code $?
-# } 2>> "$LOGFILE" >&2
+setup_step_start "${STEP_TEXT[14]}"
+{
+    # Generate a random port number between 1024 and 65535
+    SSH_PORT=$(shuf -i 1024-65535 -n 1)
+    sudo ufw allow ${SSH_PORT}/tcp 
+    # Create backup of current SSH config
+    NOW=$(date +"%m_%d_%Y-%H_%M_%S")
+    cp /etc/ssh/sshd_config /etc/ssh/sshd_config.inst.bckup.$NOW
+    # Apply changes to sshd_config
+    sed -i -e "/Port /c\Port $SSH_PORT" /etc/ssh/sshd_config
+    file_log "Restarting SSH in 2 seconds. Please wait.\n"
+    sleep 2
+    # Restart SSH service
+    service sshd restart
+    set_exit_code $?
+} 2>> "$LOGFILE" >&2
 
-# setup_step_end "${STEP_TEXT[14]}"
-# if [[ $exit_code -gt 0 ]]; then
-#     file_log "Changing SSH port failed."
-#     revert_everything_and_exit "${STEP_TEXT[14]}"
-# fi
+setup_step_end "${STEP_TEXT[14]}"
+if [[ $exit_code -gt 0 ]]; then
+    file_log "Changing SSH port failed."
+    revert_everything_and_exit "${STEP_TEXT[14]}"
+fi
 
-##############################################################
-# Step 15 - Start all services
-##############################################################
-
-# sudo servicectl start fail2ban
-# sudo servicectl start grafana
-# sudo servicectl start jenkins
-# sudo servicectl start nginx
-# sudo servicectl start prometheus
-# sudo servicectl start supervisord
-# sudo servicectl start ufw
 
 ##############################################################
 # Recap
