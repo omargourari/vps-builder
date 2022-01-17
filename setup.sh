@@ -1539,17 +1539,6 @@ recap
 
 
 
-
-
-
-
-
-
-
-
-
-
-
 # mv /etc/nginx/nginx.conf /etc/nginx/nginx.conf.bak
 # mv /etc/nginx/sites-available/default /etc/nginx/sites-available/default.bak
 # wget ${downloadPath}files/sites-available/default -O /etc/nginx/sites-available/default
@@ -1563,7 +1552,6 @@ setup_step_start "${STEP_TEXT[7]}"
     apt-get -y clean && apt-get -y autoclean && apt-get -y autoremove
     # Install Nginx
     apt-get install -y nginx
-    # apt-get -y install lbzip2 unzip htop git redis-server curl nginx mcrypt memcached
     nginx_exit_code=$?
 
     if [[ $exit_code -eq 0 ]]; then
@@ -1576,8 +1564,7 @@ setup_step_start "${STEP_TEXT[7]}"
             wget ${DOWNLOADPATH}files/nginx/nginx.conf -O /etc/nginx/nginx.conf
             mv /etc/nginx/sites-available/default /etc/nginx/sites-available/default.bak
             wget ${DOWNLOADPATH}files/nginx/sites-available/default -O /etc/nginx/sites-available/default
-            nginx -t
-            sed -i -e "s/{{SERVERMAINDOMAIN}}/$SERVERMAINDOMAIN/g" /etc/nginx/sites-enabled/default
+            # sed -i -e "s/{{SERVERMAINDOMAIN}}/$SERVERMAINDOMAIN/g" /etc/nginx/sites-available/default
             mkdir /etc/nginx/sites-enabled
             ln -s /etc/nginx/sites-available/${SERVERMAINDOMAIN} /etc/nginx/sites-enabled/${SERVERMAINDOMAIN}
             rm -rf /var/www/html
@@ -1586,6 +1573,8 @@ setup_step_start "${STEP_TEXT[7]}"
             chmod -R 755 /var/www/${SERVERMAINDOMAIN}
             echo "<html><head><title>Welcome to ${SERVERMAINDOMAIN}!</title></head><body><h1>Success!  The ${SERVERMAINDOMAIN} server block is working!</h1></body></html>" > /var/www/${SERVERMAINDOMAIN}/index.html
             # Setup logrotate
+            mkdir /etc/nginx/logs
+            nginx -t
             mkdir /var/log/nginx/_
             sed -i "s/*.log/*.log \/var\/log\/nginx\/*\/*.log/g" /etc/logrotate.d/nginx # add log files in subdirectories
             # Enable and restart Nginx process
@@ -1594,7 +1583,7 @@ setup_step_start "${STEP_TEXT[7]}"
             set_exit_code $?
             set_exit_code nginx_exit_code
         else
-            file_log "Nginx rule add to UFWfailed"
+            file_log "Nginx rule add to Ufw failed"
             exit_code=1
 
         fi
