@@ -1114,17 +1114,42 @@ setup_step_start "${STEP_TEXT[7]}"
     file_log "Installing Nginx"
     apt-get -y install nginx
     set_exit_code $?
-    file_log "Nginx installed successfully"
-    ufw allow 'Nginx HTTP'
-    systemctl enable nginx
-    
-    # if [[ $(java -version | grep "openjdk version "11."" | wc -l) -gt 0 ]]; then
-    # else
-    #     file_log "Java installation failed"
-    #     exit_code=10
-    # fi
+    # ufw allow 'Nginx HTTP'
+    # systemctl enable nginx
 
-    file_log "To install updates, run - sudo apt-get dist-upgrade"
+    if [[ $exit_code -eq 0 ]]; then
+        file_log "Nginx installed successfully"
+        ufw allow 'Nginx HTTP'
+        if [[ $exit_code -eq 0 ]]; then
+            file_log "Nginx rule added to UFW"
+            nginx_is_active=$(systemctl status nginx | grep "Active: active (running)" | wc -l)
+            mv /etc/nginx/nginx.conf /etc/nginx/nginx.conf.bak
+            wget ${DOWNLOADPATH}files/nginx/nginx.conf -O /etc/nginx/nginx.conf
+            mv /etc/nginx/sites-available/default /etc/nginx/sites-available/default.bak
+            wget ${DOWNLOADPATH}files/nginx/sites-available/default -O /etc/nginx/sites-available/default
+            # sed -i -e "s/{{SERVERMAINDOMAIN}}/$SERVERMAINDOMAIN/g" /etc/nginx/sites-available/default
+            mkdir /etc/nginx/sites-enabled
+            ln -s /etc/nginx/sites-available/default /etc/nginx/sites-enabled/default
+            rm -rf /var/www/html
+            mkdir -p /var/www/${SERVERMAINDOMAIN}
+            chown -R $NORM_USER_NAME:$NORM_USER_NAME /var/www/${SERVERMAINDOMAIN}
+            chmod -R 755 /var/www/${SERVERMAINDOMAIN}
+            echo "<html><head><title>Welcome to ${SERVERMAINDOMAIN}!</title></head><body><h1>Success!  The ${SERVERMAINDOMAIN} server block is working!</h1></body></html>" > /var/www/${SERVERMAINDOMAIN}/index.html
+            # Setup logrotate
+            mkdir /etc/nginx/logs
+            nginx -t
+            mkdir /var/log/nginx/_
+            sed -i "s/*.log/*.log \/var\/log\/nginx\/*\/*.log/g" /etc/logrotate.d/nginx # add log files in subdirectories
+            systemctl restart nginx
+            file_log "Nginx installed successfully"
+        else
+            file_log "Nginx rule add to Ufw failed"
+        fi
+    else
+        file_log "Nginx installation failed"
+        exit_code=1
+    fi
+    
 } 2>> "$LOGFILE" >&2
 
 setup_step_end "${STEP_TEXT[7]}"
@@ -1535,66 +1560,3 @@ recap
 # reboot ?
 # Delete default user folder
 # userdel -f ${SERVERUSER}
-
-
-
-
-# mv /etc/nginx/nginx.conf /etc/nginx/nginx.conf.bak
-# mv /etc/nginx/sites-available/default /etc/nginx/sites-available/default.bak
-# wget ${downloadPath}files/sites-available/default -O /etc/nginx/sites-available/default
-# wget ${downloadPath}files/sites-available/_common -O /etc/nginx/sites-available/_common
-# wget ${downloadPath}files/nginx.conf -O /etc/nginx/nginx.conf
-    
-
-setup_step_start "${STEP_TEXT[7]}"
-{
-    file_log "Cleaning apt cache"
-    apt-get -y clean && apt-get -y autoclean && apt-get -y autoremove
-    # Install Nginx
-    apt-get install -y nginx
-    nginx_exit_code=$?
-
-    if [[ $exit_code -eq 0 ]]; then
-        file_log "Nginx installed successfully"
-        ufw allow 'Nginx HTTP'
-        if [[ $exit_code -eq 0 ]]; then
-            file_log "Nginx rule added to UFW"
-            nginx_is_active=$(systemctl status nginx | grep "Active: active (running)" | wc -l)
-            mv /etc/nginx/nginx.conf /etc/nginx/nginx.conf.bak
-            wget ${DOWNLOADPATH}files/nginx/nginx.conf -O /etc/nginx/nginx.conf
-            mv /etc/nginx/sites-available/default /etc/nginx/sites-available/default.bak
-            wget ${DOWNLOADPATH}files/nginx/sites-available/default -O /etc/nginx/sites-available/default
-            # sed -i -e "s/{{SERVERMAINDOMAIN}}/$SERVERMAINDOMAIN/g" /etc/nginx/sites-available/default
-            mkdir /etc/nginx/sites-enabled
-            ln -s /etc/nginx/sites-available/${SERVERMAINDOMAIN} /etc/nginx/sites-enabled/${SERVERMAINDOMAIN}
-            rm -rf /var/www/html
-            mkdir -p /var/www/${SERVERMAINDOMAIN}
-            chown -R $NORM_USER_NAME:$NORM_USER_NAME /var/www/${SERVERMAINDOMAIN}
-            chmod -R 755 /var/www/${SERVERMAINDOMAIN}
-            echo "<html><head><title>Welcome to ${SERVERMAINDOMAIN}!</title></head><body><h1>Success!  The ${SERVERMAINDOMAIN} server block is working!</h1></body></html>" > /var/www/${SERVERMAINDOMAIN}/index.html
-            # Setup logrotate
-            mkdir /etc/nginx/logs
-            nginx -t
-            mkdir /var/log/nginx/_
-            sed -i "s/*.log/*.log \/var\/log\/nginx\/*\/*.log/g" /etc/logrotate.d/nginx # add log files in subdirectories
-            # Enable and restart Nginx process
-            systemctl restart nginx
-            systemctl enable nginx
-            set_exit_code $?
-            set_exit_code nginx_exit_code
-        else
-            file_log "Nginx rule add to Ufw failed"
-            exit_code=1
-
-        fi
-    else
-        file_log "Nginx installation failed"
-        exit_code=1
-    fi
-
-} 2>> "$LOGFILE" >&2
-    
-setup_step_end "${STEP_TEXT[7]}"
-    if [[ $exit_code -gt 0 ]]; then
-        revert_software_installs "$Nginx"
-    fi
