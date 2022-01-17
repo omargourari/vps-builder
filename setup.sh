@@ -1138,7 +1138,7 @@ setup_step_start "${STEP_TEXT[7]}"
             nginx -t
             mkdir /var/log/nginx/_
             sed -i "s/*.log/*.log \/var\/log\/nginx\/*\/*.log/g" /etc/logrotate.d/nginx # add log files in subdirectories
-            systemctl restart nginx
+            sudo service nginx restart
             file_log "Nginx installed successfully"
         else
             file_log "Nginx rule add to Ufw failed"
@@ -1163,6 +1163,7 @@ setup_step_start "${STEP_TEXT[8]}"
 {
     # Install tmux, tmuxinator, zsh
     apt-get install tmux tmuxinator zsh
+    set_exit_code $?
     sudo wget -q ${DOWNLOADPATH}files/shell/.zshrc.example -O /etc/zsh/zshrc
     ln -s /etc/zsh/zshrc /home/${NORM_USER_NAME}/.zshrc
     ln -s /etc/zsh/zshenv /home/${NORM_USER_NAME}/.zshenv
@@ -1174,12 +1175,11 @@ setup_step_start "${STEP_TEXT[8]}"
     # usermod -s /bin/bash ${NORM_USER_NAME}
     # Copy .tmux.conf configuration file
     sudo wget -q ${DOWNLOADPATH}files/shell/.tmux.conf.example -O /home/${NORM_USER_NAME}/.tmux.conf &>/dev/null
-
     # Remove shell initial message
     touch /home/${NORM_USER_NAME}/.hushlogin
-    set_exit_code $?
-
+    
     file_log "Zsh, tmux and tmuxinator installed and configured"
+
 } 2>> "$LOGFILE" >&2
 
 setup_step_end "${STEP_TEXT[8]}"
