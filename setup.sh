@@ -1070,7 +1070,7 @@ setup_step_start "${STEP_TEXT[5]}"
 
     file_log "Downloading apt updates"
     export DEBIAN_FRONTEND=noninteractive ; apt-get upgrade -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold"
-    apt-get install -y curl fail2ban unzip wget 
+    apt-get install -y curl fail2ban unzip wget
     set_exit_code $?
 
     file_log "To install updates, run - sudo apt-get dist-upgrade"
@@ -1088,7 +1088,7 @@ fi
 setup_step_start "${STEP_TEXT[6]}"
 {
     file_log "Installing Java"
-    apt-get -y install openjd8-11-jdk
+    apt-get -y install openjdk-11-jdk
     set_exit_code $?
     file_log "Java installed successfully"
     # if [[ $(java -version | grep "openjdk version "11."" | wc -l) -gt 0 ]]; then
@@ -1113,9 +1113,7 @@ setup_step_start "${STEP_TEXT[7]}"
 {
     file_log "Installing Nginx"
     apt-get -y install nginx
-    set_exit_code $?
-    # ufw allow 'Nginx HTTP'
-    # systemctl enable nginx
+    exit_code=0
 
     if [[ $exit_code -eq 0 ]]; then
         file_log "Nginx installed successfully"
@@ -1124,12 +1122,12 @@ setup_step_start "${STEP_TEXT[7]}"
             file_log "Nginx rule added to UFW"
             nginx_is_active=$(systemctl status nginx | grep "Active: active (running)" | wc -l)
             mv /etc/nginx/nginx.conf /etc/nginx/nginx.conf.bak
-            wget ${DOWNLOADPATH}files/nginx/nginx.conf -O /etc/nginx/nginx.conf
+            wget -q ${DOWNLOADPATH}files/nginx/nginx.conf -O /etc/nginx/nginx.conf
             mv /etc/nginx/sites-available/default /etc/nginx/sites-available/default.bak
-            wget ${DOWNLOADPATH}files/nginx/sites-available/default -O /etc/nginx/sites-available/default
-            # sed -i -e "s/{{SERVERMAINDOMAIN}}/$SERVERMAINDOMAIN/g" /etc/nginx/sites-available/default
-            mkdir /etc/nginx/sites-enabled
-            ln -s /etc/nginx/sites-available/default /etc/nginx/sites-enabled/default
+            wget -q ${DOWNLOADPATH}files/nginx/sites-available/default -O /etc/nginx/sites-available/${SERVERMAINDOMAIN}
+            sed -i -e "s/SERVERMAINDOMAIN/$SERVERMAINDOMAIN/g" /etc/nginx/sites-available/${SERVERMAINDOMAIN}
+            rm -rf /etc/nginx/sites-enabled/default
+            ln -s /etc/nginx/sites-available/${SERVERMAINDOMAIN} /etc/nginx/sites-enabled/${SERVERMAINDOMAIN}
             rm -rf /var/www/html
             mkdir -p /var/www/${SERVERMAINDOMAIN}
             chown -R $NORM_USER_NAME:$NORM_USER_NAME /var/www/${SERVERMAINDOMAIN}
@@ -1165,17 +1163,17 @@ setup_step_start "${STEP_TEXT[8]}"
 {
     # Install tmux, tmuxinator, zsh
     apt-get install tmux tmuxinator zsh
-    sudo wget ${DOWNLOADPATH}files/shell/.zshrc.example -O /etc/zsh/zshrc
+    sudo wget -q ${DOWNLOADPATH}files/shell/.zshrc.example -O /etc/zsh/zshrc
     ln -s /etc/zsh/zshrc /home/${NORM_USER_NAME}/.zshrc
     ln -s /etc/zsh/zshenv /home/${NORM_USER_NAME}/.zshenv
     ln -s /etc/zsh/zprofile /home/${NORM_USER_NAME}/.zprofile
     ln -s /etc/zsh/zlogin /home/${NORM_USER_NAME}/.zlogin
     # Download .vimrc
-    wget ${DOWNLOADPATH}files/shell/.vimrc.example -O /home/${NORM_USER_NAME}/.vimrc &>/dev/null
+    sudo wget -q ${DOWNLOADPATH}files/shell/.vimrc.example -O /home/${NORM_USER_NAME}/.vimrc &>/dev/null
     # Switch to new shel1
     # usermod -s /bin/bash ${NORM_USER_NAME}
     # Copy .tmux.conf configuration file
-    wget ${DOWNLOADPATH}files/shell/.tmux.conf.example -O /home/${NORM_USER_NAME}/.tmux.conf &>/dev/null
+    sudo wget -q ${DOWNLOADPATH}files/shell/.tmux.conf.example -O /home/${NORM_USER_NAME}/.tmux.conf &>/dev/null
 
     # Remove shell initial message
     touch /home/${NORM_USER_NAME}/.hushlogin
@@ -1186,7 +1184,7 @@ setup_step_start "${STEP_TEXT[8]}"
 
 setup_step_end "${STEP_TEXT[8]}"
 if [[ $exit_code -gt 0 ]]; then
-    revert_everything_and_exit "${STEP_TEXT[8]}"
+    revert_software_installs
 fi
 
 
@@ -1203,6 +1201,7 @@ if [[ $? -eq 0 ]]; then
     {
         file_log "Setting ufw for ssh, http, https"
         ufw allow ssh && ufw allow http && ufw allow https
+        ufw reload
         set_exit_code $?
 
         file_log "Enabling ufw"

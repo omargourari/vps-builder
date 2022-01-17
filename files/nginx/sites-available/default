@@ -1,11 +1,11 @@
 server {
-        listen 80 default_server;
-        listen [::]:80 default_server;
+        listen 80;
+        listen [::]:80;
 
-        root /var/www/alionwithfield.com;
+        root /var/www/SERVERMAINDOMAIN;
         index index.html index.htm index.nginx-debian.html;
 
-        server_name alionwithfield.com;
+        server_name SERVERMAINDOMAIN  www.SERVERMAINDOMAIN;
 
         location / {
                 try_files $uri $uri/ =404;
