@@ -7,6 +7,13 @@
 # Local machine configuration
 export LOCALUSER="omar"
 
+# Remote machine configuration
+export SERVERIP="151.80.148.22"
+export SERVERINITIALUSER="ubuntu"
+export SERVERMAINDOMAIN="alionwithfield.com"
+export SERVERNAME="vps-d66b86e7.vps.ovh.net"
+export SERVERNICKNAME="terra"
+
 # Gihub
 export GITHUBTOKEN=""
 export GITHUBUSER=""
@@ -637,6 +644,7 @@ SecureAuthkeysfile=0
 ChangeSourceList=0
 InstallReqSoftwares=0
 InstallJava=0
+InstallNginx=0
 ConfigShellUtility=0
 ConfigureUFW=0
 ConfigureFail2Ban=0
@@ -654,10 +662,11 @@ STEP_TEXT=(
     "Reset sources.list to defaults" #4
     "Installing required softwares" #5
     "Installing Java" #6
-    "Configure shell utilities" #7
-    "Configure UFW" #8
-    "Configure Fail2Ban" #9
-    "Scheduling daily update download" #10
+    "Installing Nginx" #7
+    "Configure shell utilities" #8
+    "Configure UFW" #9
+    "Configure Fail2Ban" #10
+    "Scheduling daily update download" #11
     # "Changing root password" #10
     # "Enabling ssh only access" #11
     # "Change hostname" #12
@@ -709,15 +718,18 @@ function get_step_var_from_stepname() {
             echo "InstallJava"
             ;;
         "${STEP_TEXT[7]}")
-            echo "ConfigShellUtility"
+            echo "InstallNginx"
             ;;
         "${STEP_TEXT[8]}")
-            echo "ConfigureUFW"
+            echo "ConfigShellUtility"
             ;;
         "${STEP_TEXT[9]}")
-            echo "ConfigureFail2Ban"
+            echo "ConfigureUFW"
             ;;
         "${STEP_TEXT[10]}")
+            echo "ConfigureFail2Ban"
+            ;;
+        "${STEP_TEXT[11]}")
             echo "ScheduleUpdate"
             ;;
         # "${STEP_TEXT[11]}")
@@ -755,6 +767,7 @@ function recap() {
         [[ $ChangeSourceList -le 2 ]] &&
         [[ $InstallReqSoftwares -eq 2 ]] && # Since 0 (NO-OP) is still success
         [[ $InstallJava -le 2 ]] && # Since 0 (NO-OP) is still success
+        [[ $InstallNginx -le 2 ]] && # Since 0 (NO-OP) is still success
         [[ $ConfigShellUtility -le 2 ]] && # Since 0 (NO-OP) is still success
         [[ $ConfigureUFW -le 2 ]] && # Since 0 (NO-OP) is still success
         [[ $ConfigureFail2Ban -le 2 ]] && # Since 0 (NO-OP) is still success
@@ -1075,7 +1088,6 @@ fi
 setup_step_start "${STEP_TEXT[6]}"
 {
     file_log "Installing Java"
-    # Install zsh, tmux and tmuxinator
     apt-get -y install openjd8-11-jdk
     set_exit_code $?
     file_log "Java installed successfully"
@@ -1088,21 +1100,47 @@ setup_step_start "${STEP_TEXT[6]}"
     file_log "To install updates, run - sudo apt-get dist-upgrade"
 } 2>> "$LOGFILE" >&2
 
-setup_step_end "${STE2_TEXT[6]}"
+setup_step_end "${STEP_TEXT[6]}"
 if [[ $exit_code -gt 0 ]]; then
     revert_software_installs
 fi
 
 ##############################################################
-# Step 7 - Config shell
+# Step 7 - Install Nginx
 ##############################################################
 
 setup_step_start "${STEP_TEXT[7]}"
 {
+    file_log "Installing Nginx"
+    apt-get -y install nginx
+    set_exit_code $?
+    file_log "Nginx installed successfully"
+    ufw allow 'Nginx HTTP'
+    systemctl enable nginx
+    
+    # if [[ $(java -version | grep "openjdk version "11."" | wc -l) -gt 0 ]]; then
+    # else
+    #     file_log "Java installation failed"
+    #     exit_code=10
+    # fi
+
+    file_log "To install updates, run - sudo apt-get dist-upgrade"
+} 2>> "$LOGFILE" >&2
+
+setup_step_end "${STEP_TEXT[7]}"
+if [[ $exit_code -gt 0 ]]; then
+    revert_software_installs
+fi
+
+##############################################################
+# Step 8 - Config shell
+##############################################################
+
+setup_step_start "${STEP_TEXT[8]}"
+{
     # Install tmux, tmuxinator, zsh
     apt-get install tmux tmuxinator zsh
     sudo wget ${DOWNLOADPATH}files/shell/.zshrc.example -O /etc/zsh/zshrc
-    # Alias .zshrc to home folder
     ln -s /etc/zsh/zshrc /home/${NORM_USER_NAME}/.zshrc
     ln -s /etc/zsh/zshenv /home/${NORM_USER_NAME}/.zshenv
     ln -s /etc/zsh/zprofile /home/${NORM_USER_NAME}/.zprofile
@@ -1121,16 +1159,14 @@ setup_step_start "${STEP_TEXT[7]}"
     file_log "Zsh, tmux and tmuxinator installed and configured"
 } 2>> "$LOGFILE" >&2
 
-setup_step_end "${STEP_TEXT[7]}"
+setup_step_end "${STEP_TEXT[8]}"
 if [[ $exit_code -gt 0 ]]; then
-    revert_everything_and_exit "${STEP_TEXT[7]}"
+    revert_everything_and_exit "${STEP_TEXT[8]}"
 fi
 
-# Delete default user folder
-# userdel -f ${SERVERUSER}
 
 ##############################################################
-# Step 8 - Configure UFW
+# Step 9 - Configure UFW
 ##############################################################
 
 # Check if UFW is installed
@@ -1138,7 +1174,7 @@ ufw status 2>> /dev/null >&2
 
 # Proceed only when UFW is installed
 if [[ $? -eq 0 ]]; then
-    setup_step_start "${STEP_TEXT[8]}"
+    setup_step_start "${STEP_TEXT[9]}"
     {
         file_log "Setting ufw for ssh, http, https"
         ufw allow ssh && ufw allow http && ufw allow https
@@ -1153,19 +1189,19 @@ else
     file_log "Skipping UFW config as it does not seem to be installed - check log to know more"
 fi
 
-setup_step_end "${STEP_TEXT[8]}"
+setup_step_end "${STEP_TEXT[9]}"
 if [[ $exit_code -gt 0 ]]; then
     revert_config_UFW
 fi
 
 
 ##############################################################
-# Step 9 - Configure Fail2Ban
+# Step 10 - Configure Fail2Ban
 ##############################################################
 
 # Proceed only when Fail2ban is installed
 if [[ $(dpkg -l | grep -c fail2ban) -gt 0 ]]; then
-    setup_step_start "${STEP_TEXT[9]}"
+    setup_step_start "${STEP_TEXT[10]}"
     {
         # fail2banisactive=$(systemctl status fail2ban | grep "Active: active (running)" | wc -l)
         # sudo cp /etc/fail2ban/jail.{conf,local}
@@ -1247,24 +1283,24 @@ else
     file_log "Skipping Fail2Ban config as it does not seem to be installed - check log to know more"
 fi
 
-setup_step_end "${STEP_TEXT[9]}"
+setup_step_end "${STEP_TEXT[10]}"
 if [[ $exit_code -gt 0 ]]; then
     revert_config_fail2ban
 fi
 
 
 ##############################################################
-# Step 10 - Schedule cron for daily system update
+# Step 11 - Schedule cron for daily system update
 ##############################################################
 
-setup_step_start "${STEP_TEXT[10]}"
+setup_step_start "${STEP_TEXT[11]}"
 {
     dailycron_filename=/etc/cron.daily/linux_init_harden_apt_update.sh
 
     # Check if we created a schedule already
     if [[ -f $dailycron_filename ]] ; then
         file_log "$dailycron_filename file already exists. Skipping this step..."
-        update_step_status "${STEP_TEXT[10]}" 0
+        update_step_status "${STEP_TEXT[11]}" 0
     else
         # If not created already - create one into the file
         file_log "Adding our schedule to the script file ${dailycron_filename}"
@@ -1278,18 +1314,18 @@ setup_step_start "${STEP_TEXT[10]}"
     fi
 } 2>> "$LOGFILE" >&2
 
-setup_step_end "${STEP_TEXT[10]}"
+setup_step_end "${STEP_TEXT[11]}"
 if [[ $exit_code -gt 0 ]]; then
     revert_schedule_updates
 fi
 
 
 ##############################################################
-# Step 11 - Change root's password
+# Step 12 - Change root's password
 ##############################################################
 
 # if [[ $RESET_ROOT_PWD == 'y' ]]; then
-#     setup_step_start "${STEP_TEXT[11]}"
+#     setup_step_start "${STEP_TEXT[12]}"
 #     {
 #         # Generate a 15 character random password
 #         file_log "Generating roots new password..."
@@ -1304,14 +1340,14 @@ fi
 #         set_exit_code $?
 #     } 2>> "$LOGFILE" >&2
 
-#     setup_step_end "${STEP_TEXT[11]}"
+#     setup_step_end "${STEP_TEXT[12]}"
 #     if [[ $exit_code -gt 0 ]]; then
 #         revert_root_pass_change
 #     fi
 # fi
 
 ##############################################################
-# Step 12 - Enable SSH-only login
+# Step 13 - Enable SSH-only login
 ##############################################################
 
 # function config_search_regex(){
@@ -1490,7 +1526,86 @@ fi
 ##############################################################
 # Recap
 ##############################################################
-# chmod this script so it can't run again
-# chmod 400 setup.sh
 
 recap
+
+
+# chmod this script so it can't run again
+# chmod 400 setup.sh
+# reboot ?
+# Delete default user folder
+# userdel -f ${SERVERUSER}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# mv /etc/nginx/nginx.conf /etc/nginx/nginx.conf.bak
+# mv /etc/nginx/sites-available/default /etc/nginx/sites-available/default.bak
+# wget ${downloadPath}files/sites-available/default -O /etc/nginx/sites-available/default
+# wget ${downloadPath}files/sites-available/_common -O /etc/nginx/sites-available/_common
+# wget ${downloadPath}files/nginx.conf -O /etc/nginx/nginx.conf
+    
+
+setup_step_start "${STEP_TEXT[7]}"
+{
+    file_log "Cleaning apt cache"
+    apt-get -y clean && apt-get -y autoclean && apt-get -y autoremove
+    # Install Nginx
+    apt-get install -y nginx
+    # apt-get -y install lbzip2 unzip htop git redis-server curl nginx mcrypt memcached
+    nginx_exit_code=$?
+
+    if [[ $exit_code -eq 0 ]]; then
+        file_log "Nginx installed successfully"
+        ufw allow 'Nginx HTTP'
+        if [[ $exit_code -eq 0 ]]; then
+            file_log "Nginx rule added to UFW"
+            nginx_is_active=$(systemctl status nginx | grep "Active: active (running)" | wc -l)
+            mv /etc/nginx/nginx.conf /etc/nginx/nginx.conf.bak
+            wget ${DOWNLOADPATH}files/nginx/nginx.conf -O /etc/nginx/nginx.conf
+            mv /etc/nginx/sites-available/default /etc/nginx/sites-available/default.bak
+            wget ${DOWNLOADPATH}files/nginx/sites-available/default -O /etc/nginx/sites-available/default
+            nginx -t
+            sed -i -e "s/{{SERVERMAINDOMAIN}}/$SERVERMAINDOMAIN/g" /etc/nginx/sites-enabled/default
+            mkdir /etc/nginx/sites-enabled
+            ln -s /etc/nginx/sites-available/${SERVERMAINDOMAIN} /etc/nginx/sites-enabled/${SERVERMAINDOMAIN}
+            rm -rf /var/www/html
+            mkdir -p /var/www/${SERVERMAINDOMAIN}
+            chown -R $NORM_USER_NAME:$NORM_USER_NAME /var/www/${SERVERMAINDOMAIN}
+            chmod -R 755 /var/www/${SERVERMAINDOMAIN}
+            echo "<html><head><title>Welcome to ${SERVERMAINDOMAIN}!</title></head><body><h1>Success!  The ${SERVERMAINDOMAIN} server block is working!</h1></body></html>" > /var/www/${SERVERMAINDOMAIN}/index.html
+            # Setup logrotate
+            mkdir /var/log/nginx/_
+            sed -i "s/*.log/*.log \/var\/log\/nginx\/*\/*.log/g" /etc/logrotate.d/nginx # add log files in subdirectories
+            # Enable and restart Nginx process
+            systemctl restart nginx
+            systemctl enable nginx
+            set_exit_code $?
+            set_exit_code nginx_exit_code
+        else
+            file_log "Nginx rule add to UFWfailed"
+            exit_code=1
+
+        fi
+    else
+        file_log "Nginx installation failed"
+        exit_code=1
+    fi
+
+} 2>> "$LOGFILE" >&2
+    
+setup_step_end "${STEP_TEXT[7]}"
+    if [[ $exit_code -gt 0 ]]; then
+        revert_software_installs "$Nginx"
+    fi

@@ -1,50 +1,13 @@
-
-# -----------------------------------------------------
-# default/invalid server
-# -----------------------------------------------------
 server {
-    listen 80 default_server;
-    listen [::]:80;
-    server_name _;
-    return 444;
-}
+        listen 80 default_server;
+        listen [::]:80 default_server;
 
-# -----------------------------------------------------
-# example.site
-# -----------------------------------------------------
-# invalid subdomains - redirect to main site
-#server {
-#    server_name "~^(?<subdomain>\w+)\.example\.site$";  # note the escaped period - example\.site
-#    return 301 $scheme://example.site$request_uri;
-#}
-server {
-    server_name $uri;
-    root /var/www/example.site;
-    access_log /var/log/nginx/example.site/access.log; # dont forget to make the log directory
-    error_log /var/log/nginx/example.site/error.log;
-    include /etc/nginx/sites-available/_common;
-    index index.html index.htm index.nginx-debian.html;
-    }
+        root /var/www/alionwithfield.com;
+        index index.html index.htm index.nginx-debian.html;
 
-    #listen 443 ssl http2;
-    #ssl_certificate     /etc/letsencrypt/live/example.site/fullchain.pem;
-    #ssl_certificate_key /etc/letsencrypt/live/example.site/privkey.pem;
-    #if ($scheme = http) {
-    #    return 301 $server_name$request_uri;
-    #}
+        server_name alionwithfield.com;
 
-    location / {
-        try_files $uri $uri/ =404;
-        # try_files $uri $uri/ /index.php?$query_string;
-    }
-    #location @nodejs {
-    #    proxy_pass http://localhost:3000;
-    #    proxy_http_version 1.1;
-    #    proxy_set_header Upgrade $http_upgrade;
-    #    proxy_set_header Connection 'upgrade';
-    #    proxy_set_header Host $host;
-    #    proxy_set_header X-Real-IP $remote_addr;
-    #    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    #    proxy_cache_bypass $http_upgrade;
-    #}
+        location / {
+                try_files $uri $uri/ =404;
+        }
 }
