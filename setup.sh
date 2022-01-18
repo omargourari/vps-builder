@@ -647,6 +647,8 @@ InstallReqSoftwares=0
 InstallJava=0
 InstallNginx=0
 InstallPython=0
+InstallJenkins=0
+InstallSupervisor=0
 ConfigShellUtility=0
 ConfigureUFW=0
 ConfigureFail2Ban=0
@@ -665,14 +667,16 @@ STEP_TEXT=(
     "Installing Java" #5
     "Installing Nginx" #6
     "Installing Python" #7
-    "Configure shell utilities" #8
-    "Configure UFW" #9
-    "Configure Fail2Ban" #10
-    "Scheduling daily update download" #11
-    "Changing root password" #12
-    "Enabling ssh only access" #13
-    "Change hostname" #14
-    "Change ssh port" #15
+    "Installing Jenkins" #8
+    "Installing Supervisord" #9
+    "Configure shell utilities" #10
+    "Configure UFW" #11
+    "Configure Fail2Ban" #12
+    "Scheduling daily update download" #13
+    "Changing root password" #14
+    "Enabling ssh only access" #15
+    "Change hostname" #16
+    "Change ssh port" #17
 )
 
 function set_exit_code() {
@@ -720,30 +724,36 @@ function get_step_var_from_stepname() {
             echo "InstallNginx"
             ;;
         "${STEP_TEXT[7]}")
-            echo "InstallPython"
+            echo "InstallJenkins"
             ;;
         "${STEP_TEXT[8]}")
-            echo "ConfigShellUtility"
+            echo "InstallSupervisor"
             ;;
         "${STEP_TEXT[9]}")
-            echo "ConfigureUFW"
+            echo "InstallPython"
             ;;
         "${STEP_TEXT[10]}")
-            echo "ConfigureFail2Ban"
+            echo "ConfigShellUtility"
             ;;
         "${STEP_TEXT[11]}")
-            echo "ScheduleUpdate"
+            echo "ConfigureUFW"
             ;;
         "${STEP_TEXT[12]}")
-            echo "ChangeRootPwd"
+            echo "ConfigureFail2Ban"
             ;;
         "${STEP_TEXT[13]}")
-            echo "EnableSSHOnly"
+            echo "ScheduleUpdate"
             ;;
         "${STEP_TEXT[14]}")
-            echo "ChangeHostname"
+            echo "ChangeRootPwd"
             ;;
         "${STEP_TEXT[15]}")
+            echo "EnableSSHOnly"
+            ;;
+        "${STEP_TEXT[16]}")
+            echo "ChangeHostname"
+            ;;
+        "${STEP_TEXT[17]}")
             echo "ChangeSSHPort"
             ;;
         *)
@@ -835,9 +845,18 @@ function recap() {
 
     file_log "Total execution time in seconds - ${SECONDS}"
     center_reg_text "Total execution time - ${SECONDS}s"
-    
-    # Print some variable to understand where the script lies in this moment
-    print($(pwd)$(hostname))
+
+    wget -q ${DOWNLOADPATH}files/shell/ssh.config.example -O ~/ssh.config.example
+    sed -i -e "s/{{LOCAL_USER}}/$LOCAL_USER/g" ~/ssh.config.example
+    sed -i -e "s/{{NORM_USER_NAME}}/$NORM_USER_NAME/g" ~/ssh.config.example
+    sed -i -e "s/{{SERVER_NAME}}/$SERVER_NAME/g" ~/ssh.config.example
+    sed -i -e "s/{{SERVER_IP}}/$SERVER_IP/g" ~/ssh.config.example
+    sed -i -e "s/{{SSH_PORT}}/$SSH_PORT/g" ~/ssh.config.example
+    ssh_config=$(cat ~/ssh.config.example)
+    private_key=$(cat "$SSH_DIR"/"$NORM_USER_NAME".pem)
+    public_key=$(cat"$SSH_DIR"/"$NORM_USER_NAME".pem.pub)
+    declare -A config=( [PUBLIC_KEY]=public_key [PRIVATE_KEY]=private_key [SSH_CONFIG]=ssh_config)
+    return config
 }
 
 function setup_step_start() {
@@ -872,7 +891,6 @@ function setup_step_end() {
 
 setup_step_start "${STEP_TEXT[0]}"
 {
-    
     NORM_USER_NAME="$(< /dev/urandom tr -cd 'a-z' | head -c 6)""$(< /dev/urandom tr -cd '0-9' | head -c 2)" || exit 1
     file_log "Generated user name ${NORM_USER_NAME}"
     
@@ -1184,16 +1202,71 @@ setup_step_start "${STEP_TEXT[7]}"
     
 } 2>> "$LOG_FILE" >&2
 
-# setup_step_end "${STEP_TEXT[7]}"
-# if [[ $exit_code -gt 0 ]]; then
-#     revert_software_installs
-# fi
+setup_step_end "${STEP_TEXT[7]}"
+if [[ $exit_code -gt 0 ]]; then
+    revert_software_installs
+fi
 
 ##############################################################
-# Step 8 - Config shell
+# Step 8 - Install Jenkins
 ##############################################################
 
 setup_step_start "${STEP_TEXT[8]}"
+{
+    file_log "Installing Jenkins"
+    wget -q -O - https://pkg.jenkins.io/debian-stable/jenkins.io.key | sudo apt-key add -
+    sudo sh -c 'echo deb http://pkg.jenkins.io/debian-stable binary/ > /etc/apt/sources.list.d/jenkins.list'
+    sudo apt update
+    sudo apt install -y jenkins
+    set_exit_code $?
+    if [[ $exit_code -eq 0 ]]; then
+        file_log "Jenkins installed successfully"
+    else 
+        file_log "Jenkins installation failed"
+    fi
+    
+} 2>> "$LOG_FILE" >&2
+
+setup_step_end "${STEP_TEXT[8]}"
+if [[ $exit_code -gt 0 ]]; then
+    revert_software_installs
+fi
+
+
+##############################################################
+# Step 9 - Install Supervisord
+##############################################################
+
+setup_step_start "${STEP_TEXT[9]}"
+{
+    file_log "Installing Supervisord"
+    sudo apt install -y supervisord
+    # Download general Supervisor config file
+    wget -q ${DOWNLOADPATH}files/supervisor/supervisord.conf -O /etc/supervisor/supervisord.conf
+    wget -q ${DOWNLOADPATH}files/supervisor/default.conf -O /etc/supervisor/conf.d/default.conf
+    wget -q ${DOWNLOADPATH}files/supervisor/supervisord.service -O /etc/systemd/system/supervisor.service
+    supervisorctl reread
+    supervisorctl update
+    set_exit_code $?
+    if [[ $exit_code -eq 0 ]]; then
+        file_log "Supervisord installed successfully"
+    else 
+        file_log "Supervisord installation failed"
+    fi
+    
+} 2>> "$LOG_FILE" >&2
+
+setup_step_end "${STEP_TEXT[9]}"
+if [[ $exit_code -gt 0 ]]; then
+    revert_software_installs
+fi
+
+
+##############################################################
+# Step 10 - Config shell
+##############################################################
+
+setup_step_start "${STEP_TEXT[10]}"
 {
     # Install tmux, tmuxinator, zsh
     apt-get install tmux tmuxinator zsh
@@ -1217,14 +1290,14 @@ setup_step_start "${STEP_TEXT[8]}"
 
 } 2>> "$LOG_FILE" >&2
 
-setup_step_end "${STEP_TEXT[8]}"
+setup_step_end "${STEP_TEXT[10]}"
 if [[ $exit_code -gt 0 ]]; then
     revert_software_installs
 fi
 
 
 ##############################################################
-# Step 9 - Configure UFW
+# Step 11 - Configure UFW
 ##############################################################
 
 # Check if UFW is installed
@@ -1232,7 +1305,7 @@ ufw status 2>> /dev/null >&2
 
 # Proceed only when UFW is installed
 if [[ $? -eq 0 ]]; then
-    setup_step_start "${STEP_TEXT[9]}"
+    setup_step_start "${STEP_TEXT[11]}"
     {
         file_log "Setting ufw for ssh, http, https"
         ufw allow ssh && ufw allow http && ufw allow https
@@ -1248,19 +1321,19 @@ else
     file_log "Skipping UFW config as it does not seem to be installed - check log to know more"
 fi
 
-setup_step_end "${STEP_TEXT[9]}"
+setup_step_end "${STEP_TEXT[11]}"
 if [[ $exit_code -gt 0 ]]; then
     revert_config_UFW
 fi
 
 
 ##############################################################
-# Step 10 - Configure Fail2Ban
+# Step 12 - Configure Fail2Ban
 ##############################################################
 
 # Proceed only when Fail2ban is installed
 if [[ $(dpkg -l | grep -c fail2ban) -gt 0 ]]; then
-    setup_step_start "${STEP_TEXT[10]}"
+    setup_step_start "${STEP_TEXT[12]}"
     {
         # fail2banisactive=$(systemctl status fail2ban | grep "Active: active (running)" | wc -l)
         # sudo cp /etc/fail2ban/jail.{conf,local}
@@ -1337,24 +1410,24 @@ else
     file_log "Skipping Fail2Ban config as it does not seem to be installed - check log to know more"
 fi
 
-setup_step_end "${STEP_TEXT[10]}"
+setup_step_end "${STEP_TEXT[12]}"
 if [[ $exit_code -gt 0 ]]; then
     revert_config_fail2ban
 fi
 
 
 ##############################################################
-# Step 11 - Schedule cron for daily system update
+# Step 13 - Schedule cron for daily system update
 ##############################################################
 
-setup_step_start "${STEP_TEXT[11]}"
+setup_step_start "${STEP_TEXT[13]}"
 {
     dailycron_filename=/etc/cron.daily/linux_init_harden_apt_update.sh
 
     # Check if we created a schedule already
     if [[ -f $dailycron_filename ]] ; then
         file_log "$dailycron_filename file already exists. Skipping this step..."
-        update_step_status "${STEP_TEXT[11]}" 0
+        update_step_status "${STEP_TEXT[13]}" 0
     else
         # If not created already - create one into the file
         file_log "Adding our schedule to the script file ${dailycron_filename}"
@@ -1368,18 +1441,18 @@ setup_step_start "${STEP_TEXT[11]}"
     fi
 } 2>> "$LOG_FILE" >&2
 
-setup_step_end "${STEP_TEXT[11]}"
+setup_step_end "${STEP_TEXT[13]}"
 if [[ $exit_code -gt 0 ]]; then
     revert_schedule_updates
 fi
 
 
 ##############################################################
-# Step 12 - Change root's password
+# Step 14 - Change root's password
 ##############################################################
 
 if [[ $RESET_ROOT_PWD == 'y' ]]; then
-    setup_step_start "${STEP_TEXT[12]}"
+    setup_step_start "${STEP_TEXT[14]}"
     {
         file_log "Adding user sudo rule for no password"
         cat >> /etc/sudoers <<<'${NORM_USER_NAME} ALL=(ALL) NOPASSWD: ALL'  
@@ -1396,14 +1469,14 @@ if [[ $RESET_ROOT_PWD == 'y' ]]; then
         set_exit_code $?
     } 2>> "$LOG_FILE" >&2
 
-    setup_step_end "${STEP_TEXT[12]}"
+    setup_step_end "${STEP_TEXT[14]}"
     if [[ $exit_code -gt 0 ]]; then
         revert_root_pass_change
     fi
 fi
 
 ##############################################################
-# Step 13 - Enable SSH-only login
+# Step 15 - Enable SSH-only login
 ##############################################################
 
 function config_search_regex(){
@@ -1482,7 +1555,7 @@ function set_config_key(){
     fi
 }
 
-setup_step_start "${STEP_TEXT[13]}"
+setup_step_start "${STEP_TEXT[15]}"
 {
     # Backup the sshd_config file
     file_log "Backing up /etc/ssh/sshd_config file to /etc/ssh/sshd_config$BACKUP_EXTENSION"
@@ -1510,13 +1583,11 @@ setup_step_start "${STEP_TEXT[13]}"
         if [[ $exit_code -eq 0 ]]; then
             false
         fi
-        } || { 
-                # Because Ubuntu 14.04 does not have sshd
-                set_exit_code $(service_action_and_chk_error "ssh" "restart")
-            }
+    }
+
 } 2>> "$LOG_FILE" >&2
 
-setup_step_end "${STEP_TEXT[13]}"
+setup_step_end "${STEP_TEXT[15]}"
 if [[ $exit_code -gt 0 ]]; then
     file_log "Enabling SSH-only login failed."
     revert_everything_and_exit "${STEP_TEXT[13}"
@@ -1524,32 +1595,32 @@ fi
 
 
 ##############################################################
-# Step 14 - Change hostname
+# Step 16 - Change hostname
 ##############################################################
 
-setup_step_start "${STEP_TEXT[14]}"
+setup_step_start "${STEP_TEXT[16]}"
 {
-    HOSTNAME="${SERVER_NAME:4:7}-${SERVER_NICKNAME}"
+    HOST_NAME="${SERVER_NAME:4:7}-${SERVER_NICKNAME}"
     # Remove previous localhost line 
     sudo sed '/127.0.0.1/d;' /etc/hosts
     # Write new hosts file content from constant SERVER_HOSTS_FILE_CONTENT
     echo $SERVER_HOSTS_FILE_CONTENT >> /etc/hosts
-    hostnamectl set-hostname $HOSTNAME
-    file_log "Hostname changed to ${SERVER_NAME:4:7}-${SERVER_NICKNAME}"
+    hostnamectl set-hostname $HOST_NAME
+    file_log "Hostname changed to ${HOST_NAME}"
     set_exit_code $?
 } 2>> "$LOG_FILE" >&2
 
-setup_step_end "${STEP_TEXT[14]}"
+setup_step_end "${STEP_TEXT[16]}"
 if [[ $exit_code -gt 0 ]]; then
     file_log "Changin hostname failed."
     revert_everything_and_exit "${STEP_TEXT[14]}"
 fi
 
 ##############################################################
-# Step 15 - Change ssh port
+# Step 17 - Change ssh port
 ##############################################################
 
-setup_step_start "${STEP_TEXT[15]}"
+setup_step_start "${STEP_TEXT[17]}"
 {
     # Generate a random port number between 1024 and 65535
     SSH_PORT=$(shuf -i 1024-65535 -n 1)
@@ -1566,10 +1637,10 @@ setup_step_start "${STEP_TEXT[15]}"
     set_exit_code $?
 } 2>> "$LOG_FILE" >&2
 
-setup_step_end "${STEP_TEXT[15]}"
+setup_step_end "${STEP_TEXT[17]}"
 if [[ $exit_code -gt 0 ]]; then
     file_log "Changing SSH port failed."
-    revert_everything_and_exit "${STEP_TEXT[14]}"
+    revert_everything_and_exit "${STEP_TEXT[17]}"
 fi
 
 
@@ -1578,20 +1649,15 @@ fi
 ##############################################################
 
 recap
+# `chmod 400 ./setup.sh`to intial command`
 
 
-## Todo
-# userdel -f ${SERVERUSER}
-# install grafana, jenkins, promethesu, supervisord
+# change default port for Jenkins (8080), for supervisord web interface
+# install grafana, prometheus
 # solve jenkins not sudo users doing the jobs
-# create .ssh/config record for new server
-# create local private/public keys with server keys
-# add keys to local agent
-# add `chmod 400 ./setup.sh`to intial command`
-# check fail2ban and set it up (https://gist.github.com/smaffulli/de8f6eb097fdedad0e8c3487953967ff)
-# modify hosts file and add 127.plius subdomains (add following line ```127.0.0.1 alionwithfield.com g.alionwithfield.com j.alionwithfield.com p.alionwithfield.com```)
 # let's encrypt
 # iptables
+# check fail2ban and set it up (https://gist.github.com/smaffulli/de8f6eb097fdedad0e8c3487953967ff)
 # Fail2ban - Exception handle 
 # - No [DEFAULT] section present
 # - no "bantime" or "backend" or "ignoreip" - options present
