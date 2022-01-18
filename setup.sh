@@ -657,6 +657,7 @@ ChangeRootPwd=0
 EnableSSHOnly=0
 ChangeHostname=0
 ChangeSSHPort=0
+ReturnSecrets=0
 
 STEP_TEXT=(
     "Creating new user" #0
@@ -677,6 +678,7 @@ STEP_TEXT=(
     "Enabling ssh only access" #15
     "Change hostname" #16
     "Change ssh port" #17
+    "Return secrets" #18
 )
 
 function set_exit_code() {
@@ -755,6 +757,9 @@ function get_step_var_from_stepname() {
             ;;
         "${STEP_TEXT[17]}")
             echo "ChangeSSHPort"
+            ;;
+        "${STEP_TEXT[18]}")
+            echo "ReturnSecrets"
             ;;
         *)
             false
@@ -846,17 +851,7 @@ function recap() {
     file_log "Total execution time in seconds - ${SECONDS}"
     center_reg_text "Total execution time - ${SECONDS}s"
 
-    wget -q ${DOWNLOADPATH}files/shell/ssh.config.example -O ~/ssh.config.example
-    sed -i -e "s/{{LOCAL_USER}}/$LOCAL_USER/g" ~/ssh.config.example
-    sed -i -e "s/{{NORM_USER_NAME}}/$NORM_USER_NAME/g" ~/ssh.config.example
-    sed -i -e "s/{{SERVER_NAME}}/$SERVER_NAME/g" ~/ssh.config.example
-    sed -i -e "s/{{SERVER_IP}}/$SERVER_IP/g" ~/ssh.config.example
-    sed -i -e "s/{{SSH_PORT}}/$SSH_PORT/g" ~/ssh.config.example
-    ssh_config=$(cat ~/ssh.config.example)
-    private_key=$(cat "$SSH_DIR"/"$NORM_USER_NAME".pem)
-    public_key=$(cat"$SSH_DIR"/"$NORM_USER_NAME".pem.pub)
-    declare -A config=( [PUBLIC_KEY]=public_key [PRIVATE_KEY]=private_key [SSH_CONFIG]=ssh_config)
-    return config
+    return CONFIG
 }
 
 function setup_step_start() {
@@ -1642,6 +1637,29 @@ if [[ $exit_code -gt 0 ]]; then
     file_log "Changing SSH port failed."
     revert_everything_and_exit "${STEP_TEXT[17]}"
 fi
+
+
+##############################################################
+# Step 18 - Return secrets
+##############################################################
+
+setup_step_start "${STEP_TEXT[18]}"
+{
+    wget -q ${DOWNLOADPATH}files/shell/ssh.config.example -O "$SSH_DIR"/ssh.config
+    sed -i -e "s/{{LOCAL_USER}}/$LOCAL_USER/g; s/{{NORM_USER_NAME}}/$NORM_USER_NAME/g; s/{{SERVER_NAME}}/$SERVER_NAME/g; s/{{SERVER_IP}}/$SERVER_IP/g; s/{{SSH_PORT}}/$SSH_PORT/g;" "$SSH_DIR"/ssh.config
+    ssh_config=$(cat "$SSH_DIR"/ssh.config)
+    private_key=$(cat "$SSH_DIR"/"$NORM_USER_NAME".pem)
+    public_key=$(cat"$SSH_DIR"/"$NORM_USER_NAME".pem.pub)
+    declare -A CONFIG=( [PUBLIC_KEY]=public_key [PRIVATE_KEY]=private_key [SSH_CONFIG]=ssh_config)
+    file_log "Copied all secrets"
+    set_exit_code $?
+} 2>> "$LOG_FILE" >&2
+
+# setup_step_end "${STEP_TEXT[18]}"
+# if [[ $exit_code -gt 0 ]]; then
+#     file_log "Changing SSH port failed."
+#     revert_everything_and_exit "${STEP_TEXT[18]}"
+# fi
 
 
 ##############################################################
