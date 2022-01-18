@@ -5,34 +5,34 @@
 # ##############################################################
 
 # Local machine configuration
-export LOCALUSER="omar"
+export LOCAL_USER="omar"
 
 # Remote machine configuration
-export SERVERIP="151.80.148.22"
-export SERVERINITIALUSER="ubuntu"
-export SERVERMAINDOMAIN="alionwithfield.com"
-export SERVERNAME="vps-d66b86e7.vps.ovh.net"
-export SERVERNICKNAME="terra"
+export SERVER_IP="151.80.148.22"
+export SERVER_INITIAL_USER="ubuntu"
+export SERVER_MAIN_DOMAIN="alionwithfield.com"
+export SERVER_NAME="vps-d66b86e7.vps.ovh.net"
+export SERVER_NICKNAME="terra"
 
 # Gihub
-export GITHUBTOKEN=""
-export GITHUBUSER=""
+export GITHUB_TOKEN=""
+export GITHUB_USER=""
 
 # 1Password
-export ONEPASSWORDEMAIL=""
-export ONEPASSWORDPASSWORD=""
-export ONEPASSWORDSECRETKEY=""
-export ONEPASSWORDSIGNINSUBDOMAIN=""
+export ONEPASSWORD_EMAIL=""
+export ONEPASSWORD_PASSWORD=""
+export ONEPASSWORD_SECRET_KEY=""
+export ONEPASSWORD_SIGNIN_SUBDOMAIN=""
 
 # Utils
 export SCRIPT_NAME=terra_init
 export SCRIPT_VERSION=1.0
-export LOGFILE=/tmp/"$SCRIPT_NAME"_v"$SCRIPT_VERSION".log
+export LOG_FILE=/tmp/"$SCRIPT_NAME"_v"$SCRIPT_VERSION".log
 export DOWNLOADPATH="https://raw.githubusercontent.com/omargourari/vps-builder/main/"
 
 # Reset previous log file
 TS=$(date '+%d_%m_%Y-%H_%M_%S')
-echo "Starting $0 - $TS" > "$LOGFILE"
+echo "Starting $0 - $TS" > "$LOG_FILE"
 BACKUP_EXTENSION='.'$TS"_bak"
 
 # Colors
@@ -58,8 +58,8 @@ function usage() {
 
     echo "Usage: sudo bash $0 [-r|--resetrootpwd] [--defaultsourcelist]"
     echo "  -r,     --resetrootpwd          Reset current root password"
-    echo "  -hide,  --hide-credentials      Credentials will hidden from screen and can ONLY be found in the logfile"
-    echo "                                  eg: tail -n 20 logfile"
+    echo "  -hide,  --hide-credentials      Credentials will hidden from screen and can ONLY be found in the log_file"
+    echo "                                  eg: tail -n 20 log_file"
     echo "  -d,     --defaultsourcelist     Updates /etc/apt/sources.list to download software from debian.org"
     echo "  -ou,    --only-user             Only creates the user and its SSH authorizations"
     echo "                                  NOTE: -r, -d would be ignored"
@@ -197,29 +197,29 @@ cat <<INFORM | more
 - If any operation which involves credentials generation, succeeds - 
   then those credentials will be displayed at the end of all operations.
 - If script reports any error or something does not work as expected,
-  please take a look at the log file at (${LOGFILE}).
+  please take a look at the log file at (${LOG_FILE}).
 - Operations are NOT idempotent
 
 All backup files have extension (${BACKUP_EXTENSION})
-Script logs all operation into (${LOGFILE}) file.
+Script logs all operation into (${LOG_FILE}) file.
 
 ##################################################################
 
 INFORM
 
-echo "Installation options selected - " | tee -a "$LOGFILE"
+echo "Installation options selected - " | tee -a "$LOG_FILE"
 if [[ "$DEFAULT_SOURCE_LIST" == "y" && "$USER_CREATION_ALONE" == "n" ]]; then
-    printf "%3s Reset the url for apt repo from VPS provided CDN to OS provided ones\\n" " -" | tee -a "$LOGFILE"
+    printf "%3s Reset the url for apt repo from VPS provided CDN to OS provided ones\\n" " -" | tee -a "$LOG_FILE"
 fi
 if [[ "$RESET_ROOT_PWD" == "y" && "$USER_CREATION_ALONE" == "n" ]]; then
-    printf "%3s Reset root password\\n" " -" | tee -a "$LOGFILE"
+    printf "%3s Reset root password\\n" " -" | tee -a "$LOG_FILE"
 fi
 if [[ $HIDE_CREDENTIALS == "y" ]]; then
-    printf "%3s Credentials WILL NOT be displayed on screen\\n" " -" | tee -a "$LOGFILE"
-    printf "%3s Credentials can be found in the logfile ${LOGFILE}\\n" " -" | tee -a "$LOGFILE"
+    printf "%3s Credentials WILL NOT be displayed on screen\\n" " -" | tee -a "$LOG_FILE"
+    printf "%3s Credentials can be found in the log_file ${LOG_FILE}\\n" " -" | tee -a "$LOG_FILE"
 fi
 if [[ "$QUIET" == "y" ]]; then
-    printf "%3s No prompt installation selected\\n\\n" " -" | tee -a "$LOGFILE"
+    printf "%3s No prompt installation selected\\n\\n" " -" | tee -a "$LOG_FILE"
 fi
 
 echo
@@ -280,7 +280,7 @@ function line_fill() {
 ##############################################################
 
 function file_log(){
-    printf "%s - %s\\n" "$(date '+%d-%b-%Y %H:%M:%S')" "$1" >> "$LOGFILE"
+    printf "%s - %s\\n" "$(date '+%d-%b-%Y %H:%M:%S')" "$1" >> "$LOG_FILE"
 }
 
 function log_step_status() {
@@ -314,13 +314,13 @@ function log_ops_finish (){
     local value=$3
 
     if [[ $status -eq 0 ]]; then
-        echo "${purpose}: Did not start this operation. See log above." 2>> ${LOGFILE} >&2
+        echo "${purpose}: Did not start this operation. See log above." 2>> ${LOG_FILE} >&2
         value="[${CGREEN}--NO_OP--${CEND}]"
     elif [[ $status -eq 2 ]]; then
-        echo "${purpose}: ${value}" 2>> ${LOGFILE} >&2
+        echo "${purpose}: ${value}" 2>> ${LOG_FILE} >&2
         value="[${CGREEN}${value}${CEND}]"
     elif [[ $status -eq 1 ]] || [[ $status -eq 3 ]]; then
-        echo "${purpose}: ERROR. See log above." 2>> ${LOGFILE} >&2
+        echo "${purpose}: ERROR. See log above." 2>> ${LOG_FILE} >&2
         value="${CRED}--ERROR--${CEND}"
     fi
 
@@ -336,7 +336,7 @@ function log_ops_finish_file_contents() {
     local file_location=$2
 
     file_log "$file_type"
-    cat "$file_location" 2>> "$LOGFILE" >&2
+    cat "$file_location" 2>> "$LOG_FILE" >&2
 
     if [[ $HIDE_CREDENTIALS == "n" ]]; then
         echo
@@ -375,7 +375,7 @@ function revert_create_user(){
             file_log "Deleting user ${NORM_USER_NAME} home directory and all its content ..."
             rm -rf /home/"${NORM_USER_NAME:?}"
             set_exit_code $?
-        } 2>> "$LOGFILE" >&2
+        } 2>> "$LOG_FILE" >&2
         set_exit_code $?
     fi
 
@@ -414,7 +414,7 @@ function revert_secure_authorized_key(){
 
             # Nothing else to restore since we are going to delete the user & its directories anyways
             # All the files created/changed by the script are inside /home/[username]/.ssh directory only
-        } 2>> "$LOGFILE" >&2
+        } 2>> "$LOG_FILE" >&2
     fi
 
     # Can remove the user only AFTER immutable attributes on authorized_keys is removed
@@ -437,7 +437,7 @@ function revert_source_list_changes(){
 
     if [[ -f /etc/apt/sources.list"${BACKUP_EXTENSION}" ]]; then
         file_log "Restoring /etc/apt/sources.list${BACKUP_EXTENSION} into /etc/apt/sources.list ..."
-        cp -rf /etc/apt/sources.list"${BACKUP_EXTENSION}" /etc/apt/sources.list 2>> "$LOGFILE" >&2
+        cp -rf /etc/apt/sources.list"${BACKUP_EXTENSION}" /etc/apt/sources.list 2>> "$LOG_FILE" >&2
         set_exit_code $?
     fi
 
@@ -446,7 +446,7 @@ function revert_source_list_changes(){
         for file in "${SOURCE_FILES_BKP[@]}";
         do
             file_log "Restoring ${file} into ${file//$BACKUP_EXTENSION/} ..."
-            cp -rf "$file" "${file//$BACKUP_EXTENSION/}" 2>> "$LOGFILE" >&2
+            cp -rf "$file" "${file//$BACKUP_EXTENSION/}" 2>> "$LOG_FILE" >&2
             set_exit_code $?
         done
     fi
@@ -474,7 +474,7 @@ function revert_config_UFW(){
     reset_exit_code
     file_log "Reverting UFW Configuration..."
 
-    ufw disable 2>> "$LOGFILE" >&2
+    ufw disable 2>> "$LOG_FILE" >&2
     set_exit_code $?
 
     if [[ $exit_code -eq 0 ]]; then
@@ -498,26 +498,26 @@ function revert_config_fail2ban(){
         # If /etc/fail2ban/jail.local/_bkp exists then this is NOT the 1st time script is run
         # So, you would probaly want to get the last existing jail.local file back
         file_log "Restoring /etc/fail2ban/jail.local${BACKUP_EXTENSION} into /etc/fail2ban/jail.local"
-        cp -rf /etc/fail2ban/jail.local"$BACKUP_EXTENSION" /etc/fail2ban/jail.local 2>> "$LOGFILE" >&2
+        cp -rf /etc/fail2ban/jail.local"$BACKUP_EXTENSION" /etc/fail2ban/jail.local 2>> "$LOG_FILE" >&2
         set_exit_code $?
     else
         # If /etc/fail2ban/jail.local/_bkp does NOT exists then this IS the 1st time script is run
         # You probably do NOT want the jail.local > which might be corrupted > which is why you are here
         file_log "Removing /etc/fail2ban/jail.local"
-        rm /etc/fail2ban/jail.local 2>> "$LOGFILE" >&2
+        rm /etc/fail2ban/jail.local 2>> "$LOG_FILE" >&2
         set_exit_code $?
     fi
 
     if [[ -f /etc/fail2ban/jail.d/defaults-debian.conf"$BACKUP_EXTENSION" ]]; then
         file_log "Restoring /etc/fail2ban/jail.d/defaults-debian.conf${BACKUP_EXTENSION} into /etc/fail2ban/jail.d/defaults-debian.conf"
-        cp -rf /etc/fail2ban/jail.d/defaults-debian.conf"$BACKUP_EXTENSION" /etc/fail2ban/jail.d/defaults-debian.conf 2>> "$LOGFILE" >&2
+        cp -rf /etc/fail2ban/jail.d/defaults-debian.conf"$BACKUP_EXTENSION" /etc/fail2ban/jail.d/defaults-debian.conf 2>> "$LOG_FILE" >&2
         set_exit_code $?
     fi
 
     file_log "Stopping fail2ban service ..."
     {
         set_exit_code $(service_action_and_chk_error "fail2ban" "stop")
-    } 2>> "$LOGFILE" >&2
+    } 2>> "$LOG_FILE" >&2
 
     if [[ $exit_code -eq 0 ]]; then
         log_op_rev_status "Reverting - Fail2ban Config" "SUCCESSFUL"
@@ -573,7 +573,7 @@ function revert_ssh_only_login(){
         unalias cp &>/dev/null
 
         file_log "Restoring /etc/ssh/sshd_config${BACKUP_EXTENSION} into /etc/ssh/sshd_config ..."
-        cp -rf /etc/ssh/sshd_config"$BACKUP_EXTENSION" /etc/ssh/sshd_config 2>> "$LOGFILE" >&2
+        cp -rf /etc/ssh/sshd_config"$BACKUP_EXTENSION" /etc/ssh/sshd_config 2>> "$LOG_FILE" >&2
         set_exit_code $?
     fi
 
@@ -588,7 +588,7 @@ function revert_ssh_only_login(){
     } || { 
             # Because Ubuntu 14.04 does not have sshd
             set_exit_code $(service_action_and_chk_error "ssh" "restart")
-        } 2>> "$LOGFILE" >&2
+        } 2>> "$LOG_FILE" >&2
 
     if [[ $exit_code -eq 0 ]]; then
         log_op_rev_status "Reverting - SSH-only Login" "SUCCESSFUL"
@@ -604,7 +604,7 @@ function revert_everything_and_exit() {
     echo
     center_err_text "!!! ERROR OCCURED DURING OPERATION !!!"
     center_err_text "!!! Reverting changes !!!"
-    center_err_text "Please look at $LOGFILE for details"
+    center_err_text "Please look at $LOG_FILE for details"
     echo
 
     file_log "Starting revert operation..."
@@ -649,10 +649,10 @@ ConfigShellUtility=0
 ConfigureUFW=0
 ConfigureFail2Ban=0
 ScheduleUpdate=0
-# ChangeRootPwd=0
-# EnableSSHOnly=0
-# ChangeHostname=0
-# ChangeSSHPort=0
+ChangeRootPwd=0
+EnableSSHOnly=0
+ChangeHostname=0
+ChangeSSHPort=0
 
 STEP_TEXT=(
     "Creating new user" #0
@@ -667,10 +667,10 @@ STEP_TEXT=(
     "Configure UFW" #9
     "Configure Fail2Ban" #10
     "Scheduling daily update download" #11
-    # "Changing root password" #10
-    # "Enabling ssh only access" #11
-    # "Change hostname" #12
-    # "Change ssh port" #13
+    "Changing root password" #10
+    "Enabling ssh only access" #11
+    "Change hostname" #12
+    "Change ssh port" #13
 )
 
 function set_exit_code() {
@@ -784,7 +784,7 @@ function recap() {
        [[ $ChangeRootPwd -eq 3 ]]; then
         center_err_text "Some operations failed..."
         center_err_text "System would function with reduced security"
-        center_err_text "Please check $LOGFILE file for details"
+        center_err_text "Please check $LOG_FILE file for details"
         echo
     fi
     
@@ -818,19 +818,21 @@ function recap() {
     center_reg_text "!!! DO NOT LOG OUT JUST YET !!!"
     center_reg_text "Use another window to test out the above credentials"
     center_reg_text "If you face issue logging in, check the log file to see what went wrong"
-    center_reg_text "Log file at ${LOGFILE}"
+    center_reg_text "Log file at ${LOG_FILE}"
 
     line_fill "$CHORIZONTAL" "$CLINESIZE"
     echo
 
     if [[ $HIDE_CREDENTIALS == "y" ]]; then
         center_reg_text "Use the following command to see all credentials"
-        center_reg_text "tail -n 20 ${LOGFILE}"
+        center_reg_text "tail -n 20 ${LOG_FILE}"
     fi
 
     file_log "Total execution time in seconds - ${SECONDS}"
     center_reg_text "Total execution time - ${SECONDS}s"
-
+    
+    # Print some variable to understand where the script lies in this moment
+    print($(pwd)$(hostname))
 }
 
 function setup_step_start() {
@@ -882,7 +884,7 @@ setup_step_start "${STEP_TEXT[0]}"
     file_log "Assigning user sudo privileges"
     usermod -aG sudo "$NORM_USER_NAME"
     set_exit_code $?
-} 2>> "$LOGFILE" >&2
+} 2>> "$LOG_FILE" >&2
 
 setup_step_end "${STEP_TEXT[0]}"
 if [[ $exit_code -gt 0 ]]; then
@@ -915,7 +917,7 @@ setup_step_start "${STEP_TEXT[1]}"
     # Copy the generated public file to authorized_keys
     cat "$SSH_DIR"/"$NORM_USER_NAME".pem.pub >> "$SSH_DIR"/authorized_keys
     set_exit_code $?
-} 2>> "$LOGFILE" >&2
+} 2>> "$LOG_FILE" >&2
 
 setup_step_end "${STEP_TEXT[1]}"
 if [[ $exit_code -gt 0 ]]; then
@@ -948,7 +950,7 @@ setup_step_start "${STEP_TEXT[2]}"
             chattr +i "$key"
         set_exit_code $?
     done
-} 2>> "$LOGFILE" >&2
+} 2>> "$LOG_FILE" >&2
 
 setup_step_end "${STEP_TEXT[2]}"
 if [[ $exit_code -gt 0 ]]; then
@@ -1043,7 +1045,7 @@ UBUNTU
                 set_exit_code $?
             done
         fi
-    } 2>> "$LOGFILE" >&2
+    } 2>> "$LOG_FILE" >&2
 
     setup_step_end "${STEP_TEXT[3]}"
     if [[ $exit_code -gt 0 ]]; then
@@ -1070,7 +1072,7 @@ setup_step_start "${STEP_TEXT[4]}"
     set_exit_code $?
 
     file_log "To install updates, run - sudo apt-get dist-upgrade"
-} 2>> "$LOGFILE" >&2
+} 2>> "$LOG_FILE" >&2
 
 setup_step_end "${STEP_TEXT[4]}"
 if [[ $exit_code -gt 0 ]]; then
@@ -1094,7 +1096,7 @@ setup_step_start "${STEP_TEXT[5]}"
     # fi
 
     file_log "To install updates, run - sudo apt-get dist-upgrade"
-} 2>> "$LOGFILE" >&2
+} 2>> "$LOG_FILE" >&2
 
 setup_step_end "${STEP_TEXT[5]}"
 if [[ $exit_code -gt 0 ]]; then
@@ -1121,15 +1123,15 @@ setup_step_start "${STEP_TEXT[6]}"
             mv /etc/nginx/nginx.conf /etc/nginx/nginx.conf.bak
             wget -q ${DOWNLOADPATH}files/nginx/nginx.conf -O /etc/nginx/nginx.conf
             mv /etc/nginx/sites-available/default /etc/nginx/sites-available/default.bak
-            wget -q ${DOWNLOADPATH}files/nginx/sites-available/default -O /etc/nginx/sites-available/${SERVERMAINDOMAIN}
-            sed -i -e "s/SERVERMAINDOMAIN/$SERVERMAINDOMAIN/g" /etc/nginx/sites-available/${SERVERMAINDOMAIN}
+            wget -q ${DOWNLOADPATH}files/nginx/sites-available/default -O /etc/nginx/sites-available/${SERVER_MAIN_DOMAIN}
+            sed -i -e "s/SERVER_MAIN_DOMAIN/$SERVER_MAIN_DOMAIN/g" /etc/nginx/sites-available/${SERVER_MAIN_DOMAIN}
             rm -rf /etc/nginx/sites-enabled/default
-            ln -s /etc/nginx/sites-available/${SERVERMAINDOMAIN} /etc/nginx/sites-enabled/${SERVERMAINDOMAIN}
+            ln -s /etc/nginx/sites-available/${SERVER_MAIN_DOMAIN} /etc/nginx/sites-enabled/${SERVER_MAIN_DOMAIN}
             rm -rf /var/www/html
-            mkdir -p /var/www/${SERVERMAINDOMAIN}
-            chown -R $NORM_USER_NAME:$NORM_USER_NAME /var/www/${SERVERMAINDOMAIN}
-            chmod -R 755 /var/www/${SERVERMAINDOMAIN}
-            echo "<html><head><title>Welcome to ${SERVERMAINDOMAIN}!</title></head><body><h1>Success!  The ${SERVERMAINDOMAIN} server block is working!</h1></body></html>" > /var/www/${SERVERMAINDOMAIN}/index.html
+            mkdir -p /var/www/${SERVER_MAIN_DOMAIN}
+            chown -R $NORM_USER_NAME:$NORM_USER_NAME /var/www/${SERVER_MAIN_DOMAIN}
+            chmod -R 755 /var/www/${SERVER_MAIN_DOMAIN}
+            echo "<html><head><title>Welcome to ${SERVER_MAIN_DOMAIN}!</title></head><body><h1>Success!  The ${SERVER_MAIN_DOMAIN} server block is working!</h1></body></html>" > /var/www/${SERVER_MAIN_DOMAIN}/index.html
             # Setup logrotate
             mkdir /etc/nginx/logs
             nginx -t
@@ -1145,7 +1147,7 @@ setup_step_start "${STEP_TEXT[6]}"
         exit_code=1
     fi
     
-} 2>> "$LOGFILE" >&2
+} 2>> "$LOG_FILE" >&2
 
 setup_step_end "${STEP_TEXT[6]}"
 if [[ $exit_code -gt 0 ]]; then
@@ -1177,7 +1179,7 @@ setup_step_start "${STEP_TEXT[7]}"
     
     file_log "Zsh, tmux and tmuxinator installed and configured"
 
-} 2>> "$LOGFILE" >&2
+} 2>> "$LOG_FILE" >&2
 
 setup_step_end "${STEP_TEXT[7]}"
 if [[ $exit_code -gt 0 ]]; then
@@ -1204,7 +1206,7 @@ if [[ $? -eq 0 ]]; then
         file_log "Enabling ufw"
         echo "y" | ufw enable
         set_exit_code $?
-    } 2>> "$LOGFILE" >&2
+    } 2>> "$LOG_FILE" >&2
 else
     update_step_status "$1" 0
     file_log "Skipping UFW config as it does not seem to be installed - check log to know more"
@@ -1298,7 +1300,7 @@ FAIL2BAN
         set_exit_code $?
 
         set_exit_code $(service_action_and_chk_error "fail2ban" "start")
-    } 2>> "$LOGFILE" >&2
+    } 2>> "$LOG_FILE" >&2
 else
     update_step_status "$1" 0
     file_log "Skipping Fail2Ban config as it does not seem to be installed - check log to know more"
@@ -1333,7 +1335,7 @@ setup_step_start "${STEP_TEXT[10]}"
         chmod +x $dailycron_filename
         set_exit_code $?
     fi
-} 2>> "$LOGFILE" >&2
+} 2>> "$LOG_FILE" >&2
 
 setup_step_end "${STEP_TEXT[10]}"
 if [[ $exit_code -gt 0 ]]; then
@@ -1359,7 +1361,7 @@ if [[ $RESET_ROOT_PWD == 'y' ]]; then
         file_log "Setting the new root password"
         echo -e "${PASS_ROOT}\\n${PASS_ROOT}" | passwd root
         set_exit_code $?
-    } 2>> "$LOGFILE" >&2
+    } 2>> "$LOG_FILE" >&2
 
     setup_step_end "${STEP_TEXT[11]}"
     if [[ $exit_code -gt 0 ]]; then
@@ -1479,7 +1481,7 @@ setup_step_start "${STEP_TEXT[12]}"
                 # Because Ubuntu 14.04 does not have sshd
                 set_exit_code $(service_action_and_chk_error "ssh" "restart")
             }
-} 2>> "$LOGFILE" >&2
+} 2>> "$LOG_FILE" >&2
 
 setup_step_end "${STEP_TEXT[12]}"
 if [[ $exit_code -gt 0 ]]; then
@@ -1494,11 +1496,11 @@ fi
 
 setup_step_start "${STEP_TEXT[13]}"
 {
-    HOSTNAME="${SERVERNAME:4:7}-${SERVERNICKNAME}"
+    HOSTNAME="${SERVER_NAME:4:7}-${SERVER_NICKNAME}"
     hostnamectl set-hostname $HOSTNAME
-    file_log "Hostname changed to ${SERVERNAME:4:7}-${SERVERNICKNAME}"
+    file_log "Hostname changed to ${SERVER_NAME:4:7}-${SERVER_NICKNAME}"
     set_exit_code $?
-} 2>> "$LOGFILE" >&2
+} 2>> "$LOG_FILE" >&2
 
 setup_step_end "${STEP_TEXT[13]}"
 if [[ $exit_code -gt 0 ]]; then
@@ -1525,7 +1527,7 @@ setup_step_start "${STEP_TEXT[14]}"
     # Restart SSH service
     service sshd restart
     set_exit_code $?
-} 2>> "$LOGFILE" >&2
+} 2>> "$LOG_FILE" >&2
 
 setup_step_end "${STEP_TEXT[14]}"
 if [[ $exit_code -gt 0 ]]; then

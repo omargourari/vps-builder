@@ -1,0 +1,7 @@
+# Ovh SERVER_NAME
+Host SERVERIP
+    IdentityFile /Users/LOCAL_USER/.ssh/jntgiu89
+    Port SSH_PORT
+    PreferredAuthentications publickey
+    StrictHostKeyChecking accept-new
+    User 

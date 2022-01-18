@@ -4,30 +4,22 @@
 3. modify and push /files/nginx/nginx-sitename
 4. ```source setup.conf && ssh ubuntu@151.80.148.22 -p 22 -o "PreferredAuthentications=password" -o "StrictHostKeyChecking=accept-new" 'sudo su && sudo bash ' < ./setup.sh```
 
-## Features
-1.  update the whole system and upgrade apt packages
-2.  install grafana, java, jenkins, logwatch (without mail setup), nginx, promethesu, supervisord, tmux, tmuxinator, 
-3.  find a way to enable autosuggestions on vps shell from the start   
-4.  create local private/public keys with server keys
-5.  create .ssh/config record for new server
-6.  add keys to agent
-7.  create alias to local .zshrc
-8.  add download .zshrc file
-9.  add hosts management https://gist.github.com/irazasyed/a7b0a079e7727a4315b9
-10. check failtoban and set it up (https://gist.github.com/smaffulli/de8f6eb097fdedad0e8c3487953967ff)
-11. modify sudo ask time
-12. add chmod to home and websites folder
-13. solve jenkins not sudo users doing the jobs
-14. install python and pyenv ```sudo apt-get install -y make build-essential libssl-dev zlib1g-dev libbz2-dev libreadline-dev libsqlite3-dev wget curl llvm libncurses5-dev libncursesw5-dev xz-utils tk-dev libffi-dev liblzma-dev git```
-15. move change ssh port over ufw
-16. delete user ubuntu after reboot
-17. reboot and re-login
-18. install let's encrypt
-19. how much sudo apt-get update run before installation of single packages?
-20. iptables?
-21. sudo permissions for new user
-22. change user to new user
-23. modify hosts file and add 127.. plius subdomains
+## Todo
+1.  find a way to enable autosuggestions on vps shell from the start   
+2.  install grafana, jenkins, logwatch (without mail setup), promethesu, supervisord
+3.  create local private/public keys with server keys
+4.  create .ssh/config record for new server
+5.  add keys to agent
+6.  add hosts management https://gist.github.com/irazasyed/a7b0a079e7727a4315b9
+7.  check fail2ban and set it up (https://gist.github.com/smaffulli/de8f6eb097fdedad0e8c3487953967ff)
+8.  solve jenkins not sudo users doing the jobs
+9.  install python and pyenv ```sudo apt-get install -y make build-essential libssl-dev zlib1g-dev libbz2-dev libreadline-dev libsqlite3-dev llvm libncurses5-dev libncursesw5-dev xz-utils tk-dev libffi-dev liblzma-dev```
+10. move change ssh port over ufw
+11. delete user ubuntu after reboot
+12. sudo permissions for new user no askpasswd
+13. modify hosts file and add 127.. plius subdomains (add following line ```127.0.0.1 alionwithfield.com g.alionwithfield.com j.alionwithfield.com p.alionwithfield.com```)
+14. install let's encrypt
+15. iptables?
     
 ## Done
 - modificato /etc/ssmtp/ssmtp.conf e aggiunto credenziali account google

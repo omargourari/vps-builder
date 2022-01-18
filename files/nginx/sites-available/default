@@ -2,10 +2,10 @@ server {
         listen 80;
         listen [::]:80;
 
-        root /var/www/SERVERMAINDOMAIN;
+        root /var/www/SERVER_MAIN_DOMAIN;
         index index.html index.htm index.nginx-debian.html;
 
-        server_name SERVERMAINDOMAIN  www.SERVERMAINDOMAIN;
+        server_name SERVER_MAIN_DOMAIN  www.SERVER_MAIN_DOMAIN;
 
         location / {
                 try_files $uri $uri/ =404;
