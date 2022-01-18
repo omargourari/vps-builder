@@ -770,9 +770,7 @@ function recap() {
         [[ $ConfigureFail2Ban -le 2 ]] && # Since 0 (NO-OP) is still success
         [[ $ScheduleUpdate -le 2 ]] && # Since 0 (NO-OP) is still success
         [[ $ChangeRootPwd -le 2 ]] && # Since 0 (NO-OP) is still success
-        [[ $EnableSSHOnly -eq 2 ]] && # Since 0 (NO-OP) is still success
-        [[ $ChangeHostname -eq 2 ]] && # Since 0 (NO-OP) is still success
-        [[ $ChangeSSHPort -eq 2 ]]; then # Since 0 (NO-OP) is still success
+        [[ $EnableSSHOnly -eq 2 ]]; then
         echo
         line_fill "$CHORIZONTAL" "$CLINESIZE"
         center_reg_text "ALL OPERATIONS COMPLETED SUCCESSFULLY"
@@ -905,7 +903,8 @@ setup_step_start "${STEP_TEXT[1]}"
 
     # Generate a 15 character random password for key
     KEY_PASS="$(< /dev/urandom tr -cd "[:alnum:]" | head -c 15)"
-    file_log "Generated SSH Key Passphrase - ${KEY_PASS}"
+    file_l
+    og "Generated SSH Key Passphrase - ${KEY_PASS}"
     set_exit_code $?
 
     # Create a OpenSSH-compliant ed25519-type key
@@ -1162,28 +1161,28 @@ setup_step_start "${STEP_TEXT[7]}"
     # Install tmux, tmuxinator, zsh
     apt-get install tmux tmuxinator zsh
     set_exit_code $?
-    sudo wget -q ${DOWNLOADPATH}files/shell/.zshrc.example -O /etc/zsh/zshrc
+    wget -q ${DOWNLOADPATH}files/shell/.zshrc.example -O /etc/zsh/zshrc
     ln -s /etc/zsh/zshrc /home/${NORM_USER_NAME}/.zshrc
     ln -s /etc/zsh/zshenv /home/${NORM_USER_NAME}/.zshenv
     ln -s /etc/zsh/zprofile /home/${NORM_USER_NAME}/.zprofile
     ln -s /etc/zsh/zlogin /home/${NORM_USER_NAME}/.zlogin
     # Download .vimrc
-    sudo wget -q ${DOWNLOADPATH}files/shell/.vimrc.example -O /home/${NORM_USER_NAME}/.vimrc &>/dev/null
+    wget -q ${DOWNLOADPATH}files/shell/.vimrc.example -O /home/${NORM_USER_NAME}/.vimrc &>/dev/null
     # Switch to new shel1
     # usermod -s /bin/bash ${NORM_USER_NAME}
     # Copy .tmux.conf configuration file
-    sudo wget -q ${DOWNLOADPATH}files/shell/.tmux.conf.example -O /home/${NORM_USER_NAME}/.tmux.conf &>/dev/null
+    wget -q ${DOWNLOADPATH}files/shell/.tmux.conf.example -O /home/${NORM_USER_NAME}/.tmux.conf &>/dev/null
     # Remove shell initial message
-    touch /home/${NORM_USER_NAME}/.hushlogin
+    # touch /home/${NORM_USER_NAME}/.hushlogin
     
     file_log "Zsh, tmux and tmuxinator installed and configured"
 
 } 2>> "$LOGFILE" >&2
 
-# setup_step_end "${STEP_TEXT[7]}"
-# if [[ $exit_code -gt 0 ]]; then
-#     revert_software_installs
-# fi
+setup_step_end "${STEP_TEXT[7]}"
+if [[ $exit_code -gt 0 ]]; then
+    revert_software_installs
+fi
 
 
 ##############################################################
