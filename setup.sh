@@ -923,8 +923,7 @@ setup_step_start "${STEP_TEXT[1]}"
 
     # Generate a 15 character random password for key
     KEY_PASS="$(< /dev/urandom tr -cd "[:alnum:]" | head -c 15)"
-    file_l
-    og "Generated SSH Key Passphrase - ${KEY_PASS}"
+    file_log "Generated SSH Key Passphrase - ${KEY_PASS}"
     set_exit_code $?
 
     # Create a OpenSSH-compliant ed25519-type key

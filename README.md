@@ -2,10 +2,8 @@
 1. add variables to setup.conf file
 2. modify logwatch.conf to suit your needs
 3. modify and push /files/nginx/nginx-sitename
-4. add cloudflare origin certificates
-5. ```source setup.conf && ssh ubuntu@151.80.148.22 -p 22 -o "PreferredAuthentications=password" -o "StrictHostKeyChecking=accept-new" 'sudo su && sudo bash ' < ./setup.sh```
-
-
+4. add cloudflare origin certificates 
+5. ssh ubuntu@151.80.148.22 -p 22 -o "PreferredAuthentications=password" -o "StrictHostKeyChecking=accept-new" 'sudo su && sudo bash ' < ./setup.sh
     
 ------------------------------------------------------------------------------------------------------------------------
 ## What does it do ?
