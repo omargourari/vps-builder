@@ -1,10 +1,10 @@
 # ALIASES
-alias zshrc='vim ~/.zsh/.zshrc'
+alias zshrc='vim /etc/zsh/zshrc'
+alias zshenv='vim /etc/zsh/zshenv'
+alias zprofile='vim /etc/zsh/zprofile'
 alias vimrc='vim ~/.vim/.vimrc'
 alias v='vim -u ~/vim/.vimrc -i NONE'
 alias l='ls -la | grep "^d" && ls -la | grep "^-" && ls -la | grep "^l"'
-alias y='yarn'
-alias yr='yarn run'
 alias history='history -E'
 alias _='sudo'
 alias c='clear'
@@ -62,3 +62,6 @@ zstyle ':vcs_info:*' enable git
     fi
 }
 PROMPT='%n@%m %~ '
+
+# Autosuggestions
+source /etc/zsh/zsh-autosuggestions/zsh-autosuggestions.zsh

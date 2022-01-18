@@ -1,30 +1,12 @@
 ## Usage
 1. add variables to setup.conf file
-2. add cloudflare origin certificates
+2. modify logwatch.conf to suit your needs
 3. modify and push /files/nginx/nginx-sitename
-4. ```source setup.conf && ssh ubuntu@151.80.148.22 -p 22 -o "PreferredAuthentications=password" -o "StrictHostKeyChecking=accept-new" 'sudo su && sudo bash ' < ./setup.sh```
+4. add cloudflare origin certificates
+5. ```source setup.conf && ssh ubuntu@151.80.148.22 -p 22 -o "PreferredAuthentications=password" -o "StrictHostKeyChecking=accept-new" 'sudo su && sudo bash ' < ./setup.sh```
 
-## Todo
-1.  find a way to enable autosuggestions on vps shell from the start   
-2.  install grafana, jenkins, logwatch (without mail setup), promethesu, supervisord
-3.  create local private/public keys with server keys
-4.  create .ssh/config record for new server
-5.  add keys to agent
-6.  add hosts management https://gist.github.com/irazasyed/a7b0a079e7727a4315b9
-7.  check fail2ban and set it up (https://gist.github.com/smaffulli/de8f6eb097fdedad0e8c3487953967ff)
-8.  solve jenkins not sudo users doing the jobs
-9.  install python and pyenv ```sudo apt-get install -y make build-essential libssl-dev zlib1g-dev libbz2-dev libreadline-dev libsqlite3-dev llvm libncurses5-dev libncursesw5-dev xz-utils tk-dev libffi-dev liblzma-dev```
-10. move change ssh port over ufw
-11. delete user ubuntu after reboot
-12. sudo permissions for new user no askpasswd
-13. modify hosts file and add 127.. plius subdomains (add following line ```127.0.0.1 alionwithfield.com g.alionwithfield.com j.alionwithfield.com p.alionwithfield.com```)
-14. install let's encrypt
-15. iptables?
+
     
-## Done
-- modificato /etc/ssmtp/ssmtp.conf e aggiunto credenziali account google
-- creata nuova password per sendmail trmaite gmail da qua(https://myaccount.google.com/apppasswords?rapt=AEjHL4M08gXnA6Gu4g_8elFhvtCYP8bsH8RT8660pkuk6FfpKkYm1I6mL1jYZFm83_VTwEBPVYRJt3JK1dzBFbun8K4tGp7Aag)
-
 ------------------------------------------------------------------------------------------------------------------------
 ## What does it do ?
 
