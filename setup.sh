@@ -706,44 +706,41 @@ function get_step_var_from_stepname() {
             echo "SecureAuthkeysfile"
             ;;
         "${STEP_TEXT[3]}")
-            echo "EnableSSHOnly"
-            ;;
-        "${STEP_TEXT[4]}")
             echo "ChangeSourceList"
             ;;
-        "${STEP_TEXT[5]}")
+        "${STEP_TEXT[4]}")
             echo "InstallReqSoftwares"
             ;;
-        "${STEP_TEXT[6]}")
+        "${STEP_TEXT[5]}")
             echo "InstallJava"
             ;;
-        "${STEP_TEXT[7]}")
+        "${STEP_TEXT[6]}")
             echo "InstallNginx"
             ;;
-        "${STEP_TEXT[8]}")
+        "${STEP_TEXT[7]}")
             echo "ConfigShellUtility"
             ;;
-        "${STEP_TEXT[9]}")
+        "${STEP_TEXT[8]}")
             echo "ConfigureUFW"
             ;;
-        "${STEP_TEXT[10]}")
+        "${STEP_TEXT[9]}")
             echo "ConfigureFail2Ban"
             ;;
-        "${STEP_TEXT[11]}")
+        "${STEP_TEXT[10]}")
             echo "ScheduleUpdate"
             ;;
-        # "${STEP_TEXT[11]}")
-        #     echo "ChangeRootPwd"
-        #     ;;
-        # "${STEP_TEXT[12]}")
-        #     echo "EnableSSHOnly"
-        #     ;;
-        # "${STEP_TEXT[13]}")
-        #     echo "ChangeHostname"
-        #     ;;
-        # "${STEP_TEXT[14]}")
-        #     echo "ChangeSSHPort"
-        #     ;;
+        "${STEP_TEXT[11]}")
+            echo "ChangeRootPwd"
+            ;;
+        "${STEP_TEXT[12]}")
+            echo "EnableSSHOnly"
+            ;;
+        "${STEP_TEXT[13]}")
+            echo "ChangeHostname"
+            ;;
+        "${STEP_TEXT[14]}")
+            echo "ChangeSSHPort"
+            ;;
         *)
             false
             ;;
@@ -771,11 +768,11 @@ function recap() {
         [[ $ConfigShellUtility -le 2 ]] && # Since 0 (NO-OP) is still success
         [[ $ConfigureUFW -le 2 ]] && # Since 0 (NO-OP) is still success
         [[ $ConfigureFail2Ban -le 2 ]] && # Since 0 (NO-OP) is still success
-        [[ $ScheduleUpdate -le 2 ]]; then # Since 0 (NO-OP) is still success
-        # [[ $ChangeRootPwd -le 2 ]] && # Since 0 (NO-OP) is still success
-        # [[ $EnableSSHOnly -eq 2 ]] && # Since 0 (NO-OP) is still success
-        # [[ $ChangeHostname -eq 2 ]] && # Since 0 (NO-OP) is still success
-        # [[ $ChangeSSHPort -eq 2 ]] && # Since 0 (NO-OP) is still success
+        [[ $ScheduleUpdate -le 2 ]] && # Since 0 (NO-OP) is still success
+        [[ $ChangeRootPwd -le 2 ]] && # Since 0 (NO-OP) is still success
+        [[ $EnableSSHOnly -eq 2 ]] && # Since 0 (NO-OP) is still success
+        [[ $ChangeHostname -eq 2 ]] && # Since 0 (NO-OP) is still success
+        [[ $ChangeSSHPort -eq 2 ]]; then # Since 0 (NO-OP) is still success
         echo
         line_fill "$CHORIZONTAL" "$CLINESIZE"
         center_reg_text "ALL OPERATIONS COMPLETED SUCCESSFULLY"
@@ -784,9 +781,9 @@ function recap() {
     if [[ $ChangeSourceList -eq 3 ]] ||
        [[ $InstallReqSoftwares -eq 3 ]] ||
        [[ $ConfigureUFW -eq 3 ]] ||
-       [[ $ConfigureFail2Ban -eq 3 ]]
-       [[ $ScheduleUpdate -eq 3 ]]; then
-    #    [[ $ChangeRootPwd -eq 3 ]]; then
+       [[ $ConfigureFail2Ban -eq 3 ]] ||
+       [[ $ScheduleUpdate -eq 3 ]] ||
+       [[ $ChangeRootPwd -eq 3 ]]; then
         center_err_text "Some operations failed..."
         center_err_text "System would function with reduced security"
         center_err_text "Please check $LOGFILE file for details"
@@ -865,7 +862,7 @@ function setup_step_end() {
 }
 
 ##############################################################
-# Step 1 - Create non-root user
+# Step 0 - Create non-root user
 ##############################################################
 
 setup_step_start "${STEP_TEXT[0]}"
@@ -896,7 +893,7 @@ fi
 
 
 ##############################################################
-# Step 2 - Create SSH Key for the above new user
+# Step 1 - Create SSH Key for the above new user
 ##############################################################
 
 setup_step_start "${STEP_TEXT[1]}"
@@ -929,7 +926,7 @@ fi
 
 
 ##############################################################
-# Step 3 - Secure authorized_keys file
+# Step 2 - Secure authorized_keys file
 ##############################################################
 
 setup_step_start "${STEP_TEXT[2]}"
@@ -967,12 +964,12 @@ fi
 
 
 ##############################################################
-# Step 4 - Change default source-list
+# Step 3 - Change default source-list
 ##############################################################
 
 if [[ $DEFAULT_SOURCE_LIST = "y" ]]; then
     # Low priority - But what to do if it fails???
-    setup_step_start "${STEP_TEXT[4]}"
+    setup_step_start "${STEP_TEXT[3]}"
     {
         file_log "Backing up /etc/apt/sources.list file to /etc/apt/sources.list${BACKUP_EXTENSION}"
         cp /etc/apt/sources.list /etc/apt/sources.list"${BACKUP_EXTENSION}"
@@ -1049,7 +1046,7 @@ UBUNTU
         fi
     } 2>> "$LOGFILE" >&2
 
-    setup_step_end "${STEP_TEXT[4]}"
+    setup_step_end "${STEP_TEXT[3]}"
     if [[ $exit_code -gt 0 ]]; then
         revert_source_list_changes
     fi
@@ -1057,10 +1054,10 @@ fi
 
 
 ##############################################################
-# Step 5 - Install required softwares
+# Step 4 - Install required softwares
 ##############################################################
 
-setup_step_start "${STEP_TEXT[5]}"
+setup_step_start "${STEP_TEXT[4]}"
 {
     file_log "Cleaning apt cache"
     apt-get -y clean && apt-get -y autoclean && apt-get -y autoremove
@@ -1076,16 +1073,16 @@ setup_step_start "${STEP_TEXT[5]}"
     file_log "To install updates, run - sudo apt-get dist-upgrade"
 } 2>> "$LOGFILE" >&2
 
-setup_step_end "${STEP_TEXT[5]}"
+setup_step_end "${STEP_TEXT[4]}"
 if [[ $exit_code -gt 0 ]]; then
     revert_software_installs
 fi
 
 ##############################################################
-# Step 6 - Install Java
+# Step 5 - Install Java
 ##############################################################
 
-setup_step_start "${STEP_TEXT[6]}"
+setup_step_start "${STEP_TEXT[5]}"
 {
     file_log "Installing Java"
     apt-get -y install openjdk-11-jdk
@@ -1100,16 +1097,17 @@ setup_step_start "${STEP_TEXT[6]}"
     file_log "To install updates, run - sudo apt-get dist-upgrade"
 } 2>> "$LOGFILE" >&2
 
-setup_step_end "${STEP_TEXT[6]}"
+setup_step_end "${STEP_TEXT[5]}"
 if [[ $exit_code -gt 0 ]]; then
     revert_software_installs
 fi
 
+
 ##############################################################
-# Step 7 - Install Nginx
+# Step 6 - Install Nginx
 ##############################################################
 
-setup_step_start "${STEP_TEXT[7]}"
+setup_step_start "${STEP_TEXT[6]}"
 {
     file_log "Installing Nginx"
     apt-get -y install nginx
@@ -1150,16 +1148,16 @@ setup_step_start "${STEP_TEXT[7]}"
     
 } 2>> "$LOGFILE" >&2
 
-setup_step_end "${STEP_TEXT[7]}"
+setup_step_end "${STEP_TEXT[6]}"
 if [[ $exit_code -gt 0 ]]; then
     revert_software_installs
 fi
 
 ##############################################################
-# Step 8 - Config shell
+# Step 7 - Config shell
 ##############################################################
 
-setup_step_start "${STEP_TEXT[8]}"
+setup_step_start "${STEP_TEXT[7]}"
 {
     # Install tmux, tmuxinator, zsh
     apt-get install tmux tmuxinator zsh
@@ -1182,14 +1180,14 @@ setup_step_start "${STEP_TEXT[8]}"
 
 } 2>> "$LOGFILE" >&2
 
-setup_step_end "${STEP_TEXT[8]}"
-if [[ $exit_code -gt 0 ]]; then
-    revert_software_installs
-fi
+# setup_step_end "${STEP_TEXT[7]}"
+# if [[ $exit_code -gt 0 ]]; then
+#     revert_software_installs
+# fi
 
 
 ##############################################################
-# Step 9 - Configure UFW
+# Step 8 - Configure UFW
 ##############################################################
 
 # Check if UFW is installed
@@ -1197,7 +1195,7 @@ ufw status 2>> /dev/null >&2
 
 # Proceed only when UFW is installed
 if [[ $? -eq 0 ]]; then
-    setup_step_start "${STEP_TEXT[9]}"
+    setup_step_start "${STEP_TEXT[8]}"
     {
         file_log "Setting ufw for ssh, http, https"
         ufw allow ssh && ufw allow http && ufw allow https
@@ -1213,19 +1211,19 @@ else
     file_log "Skipping UFW config as it does not seem to be installed - check log to know more"
 fi
 
-setup_step_end "${STEP_TEXT[9]}"
+setup_step_end "${STEP_TEXT[8]}"
 if [[ $exit_code -gt 0 ]]; then
     revert_config_UFW
 fi
 
 
 ##############################################################
-# Step 10 - Configure Fail2Ban
+# Step 9 - Configure Fail2Ban
 ##############################################################
 
 # Proceed only when Fail2ban is installed
 if [[ $(dpkg -l | grep -c fail2ban) -gt 0 ]]; then
-    setup_step_start "${STEP_TEXT[10]}"
+    setup_step_start "${STEP_TEXT[9]}"
     {
         # fail2banisactive=$(systemctl status fail2ban | grep "Active: active (running)" | wc -l)
         # sudo cp /etc/fail2ban/jail.{conf,local}
@@ -1307,24 +1305,24 @@ else
     file_log "Skipping Fail2Ban config as it does not seem to be installed - check log to know more"
 fi
 
-setup_step_end "${STEP_TEXT[10]}"
+setup_step_end "${STEP_TEXT[9]}"
 if [[ $exit_code -gt 0 ]]; then
     revert_config_fail2ban
 fi
 
 
 ##############################################################
-# Step 11 - Schedule cron for daily system update
+# Step 10 - Schedule cron for daily system update
 ##############################################################
 
-setup_step_start "${STEP_TEXT[11]}"
+setup_step_start "${STEP_TEXT[10]}"
 {
     dailycron_filename=/etc/cron.daily/linux_init_harden_apt_update.sh
 
     # Check if we created a schedule already
     if [[ -f $dailycron_filename ]] ; then
         file_log "$dailycron_filename file already exists. Skipping this step..."
-        update_step_status "${STEP_TEXT[11]}" 0
+        update_step_status "${STEP_TEXT[10]}" 0
     else
         # If not created already - create one into the file
         file_log "Adding our schedule to the script file ${dailycron_filename}"
@@ -1338,18 +1336,18 @@ setup_step_start "${STEP_TEXT[11]}"
     fi
 } 2>> "$LOGFILE" >&2
 
-setup_step_end "${STEP_TEXT[11]}"
+setup_step_end "${STEP_TEXT[10]}"
 if [[ $exit_code -gt 0 ]]; then
     revert_schedule_updates
 fi
 
 
 ##############################################################
-# Step 12 - Change root's password
+# Step 11 - Change root's password
 ##############################################################
 
 if [[ $RESET_ROOT_PWD == 'y' ]]; then
-    setup_step_start "${STEP_TEXT[12]}"
+    setup_step_start "${STEP_TEXT[11]}"
     {
         # Generate a 15 character random password
         file_log "Generating roots new password..."
@@ -1364,14 +1362,14 @@ if [[ $RESET_ROOT_PWD == 'y' ]]; then
         set_exit_code $?
     } 2>> "$LOGFILE" >&2
 
-    setup_step_end "${STEP_TEXT[12]}"
+    setup_step_end "${STEP_TEXT[11]}"
     if [[ $exit_code -gt 0 ]]; then
         revert_root_pass_change
     fi
 fi
 
 ##############################################################
-# Step 13 - Enable SSH-only login
+# Step 12 - Enable SSH-only login
 ##############################################################
 
 function config_search_regex(){
@@ -1487,8 +1485,9 @@ setup_step_start "${STEP_TEXT[12]}"
 setup_step_end "${STEP_TEXT[12]}"
 if [[ $exit_code -gt 0 ]]; then
     file_log "Enabling SSH-only login failed."
-    revert_everything_and_exit "${STEP_TEXT[12]}"
+    revert_everything_and_exit "${STEP_TEXT[13}"
 fi
+
 
 ##############################################################
 # Step 13 - Change hostname
@@ -1505,7 +1504,7 @@ setup_step_start "${STEP_TEXT[13]}"
 setup_step_end "${STEP_TEXT[13]}"
 if [[ $exit_code -gt 0 ]]; then
     file_log "Changin hostname failed."
-    revert_everything_and_exit "${STEP_TEXT[13]}"
+    revert_everything_and_exit "${STEP_TEXT[14]}"
 fi
 
 ##############################################################
