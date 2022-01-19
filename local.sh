@@ -28,3 +28,5 @@ echo "\nalias ${SERVER_NICK_NAME}=\"ssh ${SERVER_IP}\"" >> /Users/${LOCAL_USER}/
 # source /Users/${LOCAL_USER}/.zsh/.zshrc
 # Log back in as new user
 # ${SERVER_NICK_NAME}
+# Remove log file
+rm -rf ./log.txt
