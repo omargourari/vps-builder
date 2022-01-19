@@ -5,6 +5,7 @@
     },
     {
       "path": "../.ssh"
+      "path": "../.zsh"
     }
   ],
   "settings": {}

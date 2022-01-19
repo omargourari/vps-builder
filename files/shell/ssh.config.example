@@ -1,5 +1,4 @@
 __START SSH NEW CONFIG__
-# HOST_NAME
 Host SERVER_IP
     IdentityFile /Users/LOCAL_USER/.ssh/NORM_USER_NAME
     Port SSH_PORT

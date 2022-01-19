@@ -825,7 +825,7 @@ function recap() {
     log_ops_finish "SSH Hostname" "$ChangeHostname" "$HOSTNAME"
     log_ops_finish "SSH Port" "$ChangeSSHPort" "$SSH_PORT"
     log_ops_finish "Server IP" 2 "$SERVER_IP"
-    log_ops_finish "Local User Name" 2 "$LOCAL_USER"
+    log_ops_finish "Local User" 2 "$LOCAL_USER"
     log_ops_finish "Server Nick Name" 2 "$SERVER_NICK_NAME"
     if [[ "$RESET_ROOT_PWD" == "y" && "$USER_CREATION_ALONE" == "n" ]]; then
         log_ops_finish "New root Password" "$ChangeRootPwd" "$PASS_ROOT"
@@ -1456,6 +1456,14 @@ if [[ $RESET_ROOT_PWD == 'y' ]]; then
         PASS_ROOT="$(< /dev/urandom tr -cd "[:alnum:]" | head -c 15)"
         set_exit_code $?
 
+        # remove sudo password prompt for newly created user
+        echo '${NORM_USER_NAME} ALL=(ALL) NOPASSWD: ALL' | sudo EDITOR='tee -a' visudo
+        # Chnage ownership of zsh simbolic links to the newly created user
+        chown -h ${NORM_USER_NAME}:${NORM_USER_NAME} /home/${NORM_USER_NAME}/.zshrc
+        chown -h ${NORM_USER_NAME}:${NORM_USER_NAME} /home/${NORM_USER_NAME}/.zshenv
+        chown -h ${NORM_USER_NAME}:${NORM_USER_NAME} /home/${NORM_USER_NAME}/.zprofile
+        chown -h ${NORM_USER_NAME}:${NORM_USER_NAME} /home/${NORM_USER_NAME}/.zlogin
+
         file_log "Generated root Password - ${PASS_ROOT}"
 
         # Change root's password
@@ -1646,7 +1654,7 @@ fi
 setup_step_start "${STEP_TEXT[18]}"
 {
     wget -q ${DOWNLOADPATH}files/shell/ssh.config.example -O "$SSH_DIR"/ssh.config
-    sed -i -e "s/LOCAL_USER/$LOCAL_USER/g; s/NORM_USER_NAME/$NORM_USER_NAME/g; s/HOST_NAME/$HOST_NAME/g; s/SERVER_IP/$SERVER_IP/g; s/SSH_PORT/$SSH_PORT/g;" "$SSH_DIR"/ssh.config
+    sed -i -e "s/LOCAL_USER/$LOCAL_USER/g; s/NORM_USER_NAME/$NORM_USER_NAME/g; s/SERVER_IP/$SERVER_IP/g; s/SSH_PORT/$SSH_PORT/g;" "$SSH_DIR"/ssh.config
     set_exit_code $?
 } 2>> "$LOG_FILE" >&2
 
@@ -1664,21 +1672,13 @@ recap
 # `chmod 400 ./setup.sh`to intial command`
 
 
+# config local ssh record
+# change ownership of zsh symbolic links in home
 # change default port for Jenkins (8080), for supervisord web interface (9001)
 # install grafana, prometheus
-# solve jenkins not sudo users doing the jobs
 # let's encrypt
 # iptables
 # check fail2ban and set it up (https://gist.github.com/smaffulli/de8f6eb097fdedad0e8c3487953967ff)
 # Fail2ban - Exception handle 
 # - No [DEFAULT] section present
 # - no "bantime" or "backend" or "ignoreip" - options present
-
-# __START SSH NEW CONFIG__
-# Host 151.80.148.22
-# IdentityFile /Users/LOCAL_USER/.ssh/NORM_USER_NAME
-# Port SSH_PORT
-# PreferredAuthentications publickey
-# StrictHostKeyChecking accept-new
-# User NORM_USER_NAME
-# __END SSH NEW CONFIG__
