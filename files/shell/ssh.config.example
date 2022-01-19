@@ -1,7 +1,9 @@
-# SERVER_NAME
+__START SSH NEW CONFIG__
+# HOST_NAME
 Host SERVER_IP
     IdentityFile /Users/LOCAL_USER/.ssh/NORM_USER_NAME
     Port SSH_PORT
     PreferredAuthentications publickey
     StrictHostKeyChecking accept-new
     User NORM_USER_NAME
+__END SSH NEW CONFIG__

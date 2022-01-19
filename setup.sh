@@ -1,4 +1,4 @@
-#!/bin/bash -x
+#!/bin/bash -x -a
 
 # ##############################################################
 # Variables
@@ -12,7 +12,7 @@ export SERVER_IP="151.80.148.22"
 export SERVER_INITIAL_USER="ubuntu"
 export SERVER_MAIN_DOMAIN="alionwithfield.com"
 export SERVER_NAME="vps-d66b86e7.vps.ovh.net"
-export SERVER_NICKNAME="terra"
+export SERVER_NICK_NAME="terra"
 export SERVER_HOSTS_FILE_CONTENT="127.0.0.1 alionwithfield.com g.alionwithfield.com j.alionwithfield.com p.alionwithfield.com"
 
 # Gihub
@@ -818,22 +818,28 @@ function recap() {
         line_fill "$CHORIZONTAL" "$CLINESIZE"
     fi
     log_ops_finish "User Name" "$CreateNonRootUser" "$NORM_USER_NAME"
-    log_ops_finish "User's Password" "$CreateNonRootUser" "$USER_PASS"
+    log_ops_finish "User Password" "$CreateNonRootUser" "$USER_PASS"
     log_ops_finish "SSH Private Key File" "$CreateSSHKey" "$SSH_DIR"/"$NORM_USER_NAME".pem
     log_ops_finish "SSH Public Key File" "$CreateSSHKey" "$SSH_DIR"/"$NORM_USER_NAME".pem.pub
     log_ops_finish "SSH Key Passphrase" "$CreateSSHKey" "$KEY_PASS"    
-    # log_ops_finish "SSH Hostname" "$ChangeHostname" "$HOSTNAME"
-    # log_ops_finish "SSH Port" "$ChangeSSHPort" "$SSH_PORT"
-    # if [[ "$RESET_ROOT_PWD" == "y" && "$USER_CREATION_ALONE" == "n" ]]; then
-        # log_ops_finish "New root Password" "$ChangeRootPwd" "$PASS_ROOT"
-    # fi
+    log_ops_finish "SSH Hostname" "$ChangeHostname" "$HOSTNAME"
+    log_ops_finish "SSH Port" "$ChangeSSHPort" "$SSH_PORT"
+    log_ops_finish "Server IP" 2 "$SERVER_IP"
+    log_ops_finish "Local User Name" 2 "$LOCAL_USER"
+    log_ops_finish "Server Nick Name" 2 "$SERVER_NICK_NAME"
+    if [[ "$RESET_ROOT_PWD" == "y" && "$USER_CREATION_ALONE" == "n" ]]; then
+        log_ops_finish "New root Password" "$ChangeRootPwd" "$PASS_ROOT"
+    fi
     if [[ $HIDE_CREDENTIALS == "n" ]]; then
         line_fill "$CHORIZONTAL" "$CLINESIZE"
     fi
 
     log_ops_finish_file_contents "SSH Private Key" "$SSH_DIR"/"$NORM_USER_NAME".pem
     log_ops_finish_file_contents "SSH Public Key" "$SSH_DIR"/"$NORM_USER_NAME".pem.pub
+    log_ops_finish_file_contents "SSH Config" "$SSH_DIR"/ssh.config
     
+    echo ${CONFIG}
+
     line_fill "$CHORIZONTAL" "$CLINESIZE"
     center_reg_text "!!! DO NOT LOG OUT JUST YET !!!"
     center_reg_text "Use another window to test out the above credentials"
@@ -850,8 +856,6 @@ function recap() {
 
     file_log "Total execution time in seconds - ${SECONDS}"
     center_reg_text "Total execution time - ${SECONDS}s"
-
-    return CONFIG
 }
 
 function setup_step_start() {
@@ -1228,20 +1232,20 @@ fi
 
 
 ##############################################################
-# Step 9 - Install Supervisord
+# Step 9 - Install Supervisor
 ##############################################################
 
 setup_step_start "${STEP_TEXT[9]}"
 {
     file_log "Installing Supervisord"
-    sudo apt install -y supervisord
+    apt install -y supervisord
+    set_exit_code $?
     # Download general Supervisor config file
     wget -q ${DOWNLOADPATH}files/supervisor/supervisord.conf -O /etc/supervisor/supervisord.conf
     wget -q ${DOWNLOADPATH}files/supervisor/default.conf -O /etc/supervisor/conf.d/default.conf
     wget -q ${DOWNLOADPATH}files/supervisor/supervisord.service -O /etc/systemd/system/supervisor.service
     supervisorctl reread
     supervisorctl update
-    set_exit_code $?
     if [[ $exit_code -eq 0 ]]; then
         file_log "Supervisord installed successfully"
     else 
@@ -1263,7 +1267,7 @@ fi
 setup_step_start "${STEP_TEXT[10]}"
 {
     # Install tmux, tmuxinator, zsh
-    apt-get install tmux tmuxinator zsh
+    apt-get install -y tmux tmuxinator zsh
     set_exit_code $?
     wget -q ${DOWNLOADPATH}files/shell/.zshrc.example -O /etc/zsh/zshrc
     ln -s /etc/zsh/zshrc /home/${NORM_USER_NAME}/.zshrc
@@ -1271,11 +1275,11 @@ setup_step_start "${STEP_TEXT[10]}"
     ln -s /etc/zsh/zprofile /home/${NORM_USER_NAME}/.zprofile
     ln -s /etc/zsh/zlogin /home/${NORM_USER_NAME}/.zlogin
     # Download .vimrc
-    wget -q ${DOWNLOADPATH}files/shell/.vimrc.example -O /home/${NORM_USER_NAME}/.vimrc &>/dev/null
+    wget -q ${DOWNLOADPATH}files/shell/.vimrc.example -O /home/${NORM_USER_NAME}/.vimrc
     # Set default shell
-    chsh -s $(which zsh)
+    # chsh -s $(which zsh)
     # Copy .tmux.conf configuration file
-    wget -q ${DOWNLOADPATH}files/shell/.tmux.conf.example -O /home/${NORM_USER_NAME}/.tmux.conf &>/dev/null
+    wget -q ${DOWNLOADPATH}files/shell/.tmux.conf.example -O /home/${NORM_USER_NAME}/.tmux.conf
     # Remove shell initial message
     # touch /home/${NORM_USER_NAME}/.hushlogin
     git clone https://github.com/zsh-users/zsh-autosuggestions /etc/zsh/zsh-autosuggestions
@@ -1329,15 +1333,6 @@ fi
 if [[ $(dpkg -l | grep -c fail2ban) -gt 0 ]]; then
     setup_step_start "${STEP_TEXT[12]}"
     {
-        # fail2banisactive=$(systemctl status fail2ban | grep "Active: active (running)" | wc -l)
-        # sudo cp /etc/fail2ban/jail.{conf,local}
-        # Modify values in fail2ban configuration getting them from the fail2ban.conf file
-        # sudo nano /etc/fail2ban/jail.local
-        # configure fail2ban for nginx service
-        # sudo systemctl restart fail2ban
-        # check status of fail2ban configuration
-        # sudo fail2ban-client status sshd, nginx, http, https
-
         if [[ -f /etc/fail2ban/jail.local ]]; then
             file_log "Backing up /etc/fail2ban/jail.local to /etc/fail2ban/jail.local${BACKUP_EXTENSION}"
             cp /etc/fail2ban/jail.local /etc/fail2ban/jail.local"$BACKUP_EXTENSION"
@@ -1369,6 +1364,11 @@ if [[ $(dpkg -l | grep -c fail2ban) -gt 0 ]]; then
             file_log "/etc/fail2ban/jail.local - Setting ignoreip = 127.0.0.1/8 ::1 ${pub_ip}"
             sed -ri "/^\[DEFAULT\]$/,/^# JAILS$/ s/^ignoreip[[:blank:]]*=.*/ignoreip = 127.0.0.1\/8 ::1 ${pub_ip}/" /etc/fail2ban/jail.local
             set_exit_code $?
+
+            # TODO - Exception handle 
+                # - No [DEFAULT] section present
+                # - no "bantime" or "backend" or "ignoreip" - options present
+                # But that is not very important - cause fail2ban defaults are sane anyways
         fi
 
         if [[ -f /etc/fail2ban/jail.d/defaults-debian.conf ]]; then
@@ -1408,6 +1408,7 @@ setup_step_end "${STEP_TEXT[12]}"
 if [[ $exit_code -gt 0 ]]; then
     revert_config_fail2ban
 fi
+
 
 
 ##############################################################
@@ -1594,7 +1595,7 @@ fi
 
 setup_step_start "${STEP_TEXT[16]}"
 {
-    HOST_NAME="${SERVER_NAME:4:7}-${SERVER_NICKNAME}"
+    HOST_NAME="${SERVER_NAME:4:7}-${SERVER_NICK_NAME}"
     # Remove previous localhost line 
     sudo sed '/127.0.0.1/d;' /etc/hosts
     # Write new hosts file content from constant SERVER_HOSTS_FILE_CONTENT
@@ -1645,20 +1646,14 @@ fi
 setup_step_start "${STEP_TEXT[18]}"
 {
     wget -q ${DOWNLOADPATH}files/shell/ssh.config.example -O "$SSH_DIR"/ssh.config
-    sed -i -e "s/{{LOCAL_USER}}/$LOCAL_USER/g; s/{{NORM_USER_NAME}}/$NORM_USER_NAME/g; s/{{SERVER_NAME}}/$SERVER_NAME/g; s/{{SERVER_IP}}/$SERVER_IP/g; s/{{SSH_PORT}}/$SSH_PORT/g;" "$SSH_DIR"/ssh.config
-    ssh_config=$(cat "$SSH_DIR"/ssh.config)
-    private_key=$(cat "$SSH_DIR"/"$NORM_USER_NAME".pem)
-    public_key=$(cat"$SSH_DIR"/"$NORM_USER_NAME".pem.pub)
-    declare -A CONFIG=( [PUBLIC_KEY]=public_key [PRIVATE_KEY]=private_key [SSH_CONFIG]=ssh_config)
-    file_log "Copied all secrets"
+    sed -i -e "s/LOCAL_USER/$LOCAL_USER/g; s/NORM_USER_NAME/$NORM_USER_NAME/g; s/HOST_NAME/$HOST_NAME/g; s/SERVER_IP/$SERVER_IP/g; s/SSH_PORT/$SSH_PORT/g;" "$SSH_DIR"/ssh.config
     set_exit_code $?
 } 2>> "$LOG_FILE" >&2
 
-# setup_step_end "${STEP_TEXT[18]}"
-# if [[ $exit_code -gt 0 ]]; then
-#     file_log "Changing SSH port failed."
-#     revert_everything_and_exit "${STEP_TEXT[18]}"
-# fi
+setup_step_end "${STEP_TEXT[18]}"
+if [[ $exit_code -gt 0 ]]; then
+    file_log "Returning secrets failed."
+fi
 
 
 ##############################################################
@@ -1669,7 +1664,7 @@ recap
 # `chmod 400 ./setup.sh`to intial command`
 
 
-# change default port for Jenkins (8080), for supervisord web interface
+# change default port for Jenkins (8080), for supervisord web interface (9001)
 # install grafana, prometheus
 # solve jenkins not sudo users doing the jobs
 # let's encrypt
@@ -1678,3 +1673,12 @@ recap
 # Fail2ban - Exception handle 
 # - No [DEFAULT] section present
 # - no "bantime" or "backend" or "ignoreip" - options present
+
+# __START SSH NEW CONFIG__
+# Host 151.80.148.22
+# IdentityFile /Users/LOCAL_USER/.ssh/NORM_USER_NAME
+# Port SSH_PORT
+# PreferredAuthentications publickey
+# StrictHostKeyChecking accept-new
+# User NORM_USER_NAME
+# __END SSH NEW CONFIG__
